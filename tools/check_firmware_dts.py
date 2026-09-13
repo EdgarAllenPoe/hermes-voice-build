@@ -1,22 +1,82 @@
 #!/usr/bin/env python3
-"""Mandatory conservative preflight of the generated Zephyr DTS, before battery use.
-Not a replacement for measuring charge current or checking the physical board.
+"""Check the generated DTS and Kconfig before publishing a firmware image.
+Static checks do not replace USB-only commissioning or battery measurements.
+The pinned Seeed BSP removed the unconnected power_en node; BUCK2/vsys_3v3
+is the real always-on system supply. See BUILD_NOTES.md for vendor provenance.
 """
-import argparse,re
+import argparse
+import re
 from pathlib import Path
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('dts',type=Path);a=p.parse_args();text=a.dts.read_text()
-def val(block,key):
- m=re.search(r'\b'+re.escape(key)+r'\s*=\s*<\s*(0x[0-9a-fA-F]+|[0-9]+)',block)
- if not m:raise ValueError('Missing '+key)
- return int(m[1],0)
-try:
- blocks=re.findall(r'[^{}]*\{([^{}]*compatible\s*=\s*"nordic,npm1300-charger"[^{}]*)\}',text,re.S)
- if len(blocks)!=1:raise ValueError('Expected exactly one charger node; inspect BSP/overlay instead of guessing')
- b=blocks[0]
- for k,v in {'current-microamp':100000,'term-microvolt':4200000,'thermistor-ohms':10000}.items():
-  if val(b,k)!=v:raise ValueError(f'{k} is not {v}')
- if 'charging-enable;' not in b:raise ValueError('Charging is not enabled')
- for label in ('hvb_audio','hvb_settings','voice-button','power_en','dmic_vdd','pdm20','py25q64'):
-  if label not in text:raise ValueError('Missing board label '+label)
- print('DTS labels and charger values passed. Manually verify audio partition 0..0x77ffff, settings 0x780000..0x7fffff, mic rail 3.3 V, and no competing D0 use.')
-except Exception as e:p.exit(1,f'PREFLIGHT FAILED: {e}\nDo not connect the LiPo until corrected and checked.\n')
+
+
+def validate(dts: str, config: str) -> None:
+    text = re.sub(r'/\*.*?\*/', '', dts, flags=re.S)
+    def need(ok, message):
+        if not ok:
+            raise ValueError(message)
+    def leaf(label):
+        matches = re.findall(r'\b' + re.escape(label) + r'\s*:\s*[^{}]*\{([^{}]*)\}', text, re.S)
+        need(len(matches) == 1, 'Expected one leaf node labelled ' + label)
+        return matches[0]
+    def cells(block, key):
+        m = re.search(r'(?<![\w,-])' + re.escape(key) + r'\s*=\s*<([^>]*)>', block)
+        need(m is not None, 'Missing numeric property ' + key)
+        return [int(x, 0) for x in m[1].split()]
+    def scalar(block, key, expected):
+        need(cells(block, key) == [expected], f'{key} must be {expected}')
+    chargers = re.findall(r'[^{}]*\{([^{}]*compatible\s*=\s*"nordic,npm1300-charger"[^{}]*)\}', text, re.S)
+    need(len(chargers) == 1, 'Expected exactly one charger node')
+    charger = chargers[0]
+    need(re.search(r'status\s*=\s*"okay"', charger), 'Charger must be active')
+    for key, value in {'current-microamp':100000, 'term-microvolt':4200000,
+                       'vbus-limit-microamp':500000, 'thermistor-ohms':10000}.items():
+        scalar(charger, key, value)
+    need('charging-enable;' in charger, 'Charging must be enabled at the verified profile')
+    system = leaf('vsys_3v3')
+    need('regulator-always-on;' in system, 'System BUCK2 must remain always on')
+    for rail in (system, leaf('dmic_vdd')):
+        scalar(rail, 'regulator-min-microvolt', 3300000)
+        scalar(rail, 'regulator-max-microvolt', 3300000)
+    mic = leaf('dmic_vdd')
+    need('regulator-boot-on;' not in mic and 'regulator-always-on;' not in mic,
+         'Microphone rail must remain application controlled')
+    need(cells(leaf('hvb_audio'), 'reg') == [0, 0x780000], 'Audio partition changed')
+    need(cells(leaf('hvb_settings'), 'reg') == [0x780000, 0x80000], 'Settings partition changed')
+    need(re.search(r'zephyr,settings-partition\s*=\s*&hvb_settings\s*;', text), 'Wrong settings partition selected')
+    need(re.search(r'gpios\s*=\s*<\s*&gpio1\s+(?:0x0|0)\s+(?:0x11|17)\s*>', leaf('hvb_button')),
+         'Capture button must be P1.00, active low with pull-up')
+    for label in ('pdm20', 'py25q64', 'bt_hci_controller'):
+        need(re.search(r'\b' + label + r'\s*:', text), 'Missing exact-board label ' + label)
+    need('voice-button' in text, 'Missing capture-button alias')
+    values = dict(re.findall(r'^(CONFIG_\w+)=(.+)$', config, re.M))
+    for symbol in ('SENSOR', 'REGULATOR', 'ENTROPY_GENERATOR', 'CSPRNG_ENABLED',
+                   'HARDWARE_DEVICE_CS_GENERATOR', 'BT_SMP', 'BT_SMP_SC_ONLY',
+                   'BT_FIXED_PASSKEY', 'BT_SMP_APP_PAIRING_ACCEPT', 'BT_SETTINGS',
+                   'AUDIO_DMIC', 'SPI_NOR', 'SETTINGS_NVS'):
+        need(values.get('CONFIG_' + symbol) == 'y', symbol + ' must be enabled')
+    for symbol in ('TEST_RANDOM_GENERATOR', 'TEST_CSPRNG_GENERATOR'):
+        need(values.get('CONFIG_' + symbol) != 'y', 'Insecure test random generator selected')
+    sensor = int(values.get('CONFIG_SENSOR_INIT_PRIORITY', '-1'))
+    common = int(values.get('CONFIG_REGULATOR_NPM13XX_COMMON_INIT_PRIORITY', '-1'))
+    regulator = int(values.get('CONFIG_REGULATOR_NPM13XX_INIT_PRIORITY', '-1'))
+    need(0 <= sensor < common < regulator, 'Charger init must precede PMIC regulator initialization')
+    need(values.get('CONFIG_BT_MAX_CONN') == '1' and values.get('CONFIG_BT_MAX_PAIRED') == '1',
+         'Firmware must use the single-phone connection/bond configuration')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('dts', type=Path)
+    parser.add_argument('--config', type=Path, help='Defaults to .config beside generated zephyr.dts')
+    args = parser.parse_args()
+    config = args.config or args.dts.parent / '.config'
+    try:
+        validate(args.dts.read_text(), config.read_text())
+    except (OSError, ValueError) as exc:
+        parser.exit(1, f'PREFLIGHT FAILED: {exc}\nDo not attach the LiPo until corrected and measured.\n')
+    print('Generated DTS/Kconfig checks passed: 100 mA / 4.20 V charger, 3.3 V rails, partition ranges, P1.00 button, secure RNG/BLE, and charger-before-regulator initialization.')
+    print('This is not a physical charger, microphone, Bluetooth, or battery test.')
+    return 0
+
+if __name__ == '__main__':
+    raise SystemExit(main())

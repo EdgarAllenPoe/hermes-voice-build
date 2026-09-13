@@ -59,7 +59,9 @@ def main():
                     for f in records[-1].parent.iterdir():
                         if f.is_file() and f.suffix == '.apk':
                             shutil.copy2(f, out / f.name)
-                key = Path.home() / '.android/debug.keystore'
+                key = Path(os.environ.get('HVB_DEBUG_KEYSTORE', str(Path.home() / '.android/debug.keystore')))
+                if result.get('complete') and not key.is_file():
+                    raise RuntimeError('Verified APK lacks its private signing-key backup; refusing publication')
                 if key.is_file():
                     z.write(key, 'android/debug.keystore')
                     private_count += 1

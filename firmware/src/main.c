@@ -14,7 +14,8 @@ static const struct gpio_dt_spec button=GPIO_DT_SPEC_GET(DT_ALIAS(voice_button),
 static const struct gpio_dt_spec onboard=GPIO_DT_SPEC_GET(DT_ALIAS(sw0),gpios);
 static const struct gpio_dt_spec leds[]={GPIO_DT_SPEC_GET(DT_ALIAS(led1),gpios),GPIO_DT_SPEC_GET(DT_ALIAS(led2),gpios),GPIO_DT_SPEC_GET(DT_ALIAS(led0),gpios)};
 static const struct device *const mic=DEVICE_DT_GET(DT_NODELABEL(pdm20));
-static const struct device *const main_power=DEVICE_DT_GET(DT_NODELABEL(power_en));
+/* Pinned Seeed BSP removed the unconnected power_en GPIO; BUCK2 is the real supply. */
+static const struct device *const main_power=DEVICE_DT_GET(DT_NODELABEL(vsys_3v3));
 static const struct device *const rail=DEVICE_DT_GET(DT_NODELABEL(dmic_vdd));
 static const struct device *const charger=DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(nordic_npm1300_charger));
 static struct gpio_callback ext_cb,int_cb;
@@ -76,7 +77,7 @@ int main(void){
     if(!device_is_ready(main_power)){hvb_led(1,0,0);return -ENODEV;}
     int power_rc=regulator_enable(main_power);
     if(power_rc && power_rc!=-EALREADY){hvb_led(1,0,0);return power_rc;}
-    k_msleep(20); /* Vendor board power rail must settle before BLE initialization. */
+    k_msleep(20); /* Conservative settle after checking the actual always-on 3.3 V rail. */
     if(setup_button(&button,&ext_cb)||setup_button(&onboard,&int_cb)||hvb_store_init()||hvb_ble_init()){
         hvb_led(1,0,0);return -EIO;
     }
