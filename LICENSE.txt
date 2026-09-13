@@ -1,0 +1,7 @@
+Hermes Voice Button — custom project source and documentation
+
+Permission is granted to use, copy, modify and redistribute the original custom source code and documentation in this package, with or without modification, for personal or commercial purposes. Preserve this notice in substantial redistributed copies.
+
+THE CUSTOM MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. No representation is made regarding fitness, security, merchantability, regulatory compliance, battery safety, or compatibility with any particular device or third-party software. You are responsible for reviewing, building, testing and safely operating the hardware and software.
+
+Third-party software, tools, models, libraries, boards, documentation and services remain subject to their respective licenses and terms. Their source or binaries are not generally bundled here. Consult SOURCES.md and the relevant upstream license before copying or redistributing third-party dependencies. This permission does not relicense upstream materials or grant trademark rights.
