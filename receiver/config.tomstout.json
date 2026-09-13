@@ -1,0 +1,15 @@
+{
+  "bind": "100.99.200.55",
+  "port": 8765,
+  "state_directory": "~/.local/state/hermes-voice",
+  "token_file": "~/.config/hermes-voice/token",
+  "quota_bytes": 104857600,
+  "whisper_executable": "/REPLACE/WITH/whisper.cpp/build/bin/whisper-cli",
+  "whisper_model": "/REPLACE/WITH/whisper.cpp/models/ggml-small.bin",
+  "language": "auto",
+  "hermes_executable": "/REPLACE/WITH/absolute/path/to/hermes",
+  "hermes_working_directory": "~",
+  "delivery_mode": "review",
+  "transcribe_timeout": 7200,
+  "hermes_timeout": 7200
+}

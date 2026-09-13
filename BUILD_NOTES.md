@@ -12,4 +12,4 @@ Firmware and its generated pairing code are encrypted together before artifact u
 
 Use USB power first with the LiPo disconnected. Verify the exact nRF54LM20A Sense board, actual microphone rail, flash/settings boundaries, and 100 mA / 4.20 V charging behavior before battery operation. This is not firmware for an nRF54L15 or nRF52840.
 
-The Linux receiver and full original manual remain in the supplied complete project package. This repository initially contains the target build subset; it does not deploy or start services on the Hermes host.
+The repository now includes the Linux receiver, Markdown guides, hardware notes, fixtures, and host tests. The original printable manual and compiled binaries remain in the separate private delivery kit. Committing or building this source does not deploy or start services on the Hermes host.

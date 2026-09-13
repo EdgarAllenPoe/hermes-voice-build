@@ -1,0 +1,79 @@
+test_bad_frame_even_with_crc (test_audio.AudioTests.test_bad_frame_even_with_crc) ... ok
+test_crc_rejection (test_audio.AudioTests.test_crc_rejection) ... ok
+test_empty (test_audio.AudioTests.test_empty) ... ok
+test_header_fields (test_audio.AudioTests.test_header_fields) ... ok
+test_oversize (test_audio.AudioTests.test_oversize) ... ok
+test_padding (test_audio.AudioTests.test_padding) ... ok
+test_random_extremes (test_audio.AudioTests.test_random_extremes) ... ok
+test_reserved_rejection (test_audio.AudioTests.test_reserved_rejection) ... ok
+test_roundtrip_silence (test_audio.AudioTests.test_roundtrip_silence) ... ok
+test_truncation (test_audio.AudioTests.test_truncation) ... ok
+test_wav (test_audio.AudioTests.test_wav) ... ok
+test_zero_id (test_audio.AudioTests.test_zero_id) ... ok
+test_ack_retained_across_interrupted_erase (test_flash_simulation.FlashSimulationTests.test_ack_retained_across_interrupted_erase) ... ok
+test_committed_audio_roundtrips (test_flash_simulation.FlashSimulationTests.test_committed_audio_roundtrips) ... ok
+test_full_queue_does_not_overwrite (test_flash_simulation.FlashSimulationTests.test_full_queue_does_not_overwrite) ... ok
+test_header_commit_failure_not_exposed (test_flash_simulation.FlashSimulationTests.test_header_commit_failure_not_exposed) ... ok
+test_interrupted_uncommitted_not_exposed (test_flash_simulation.FlashSimulationTests.test_interrupted_uncommitted_not_exposed) ... ok
+test_read_bounds (test_flash_simulation.FlashSimulationTests.test_read_bounds) ... ok
+test_reboot_retains_commit (test_flash_simulation.FlashSimulationTests.test_reboot_retains_commit) ... ok
+test_wrong_id_cannot_delete (test_flash_simulation.FlashSimulationTests.test_wrong_id_cannot_delete) ... ok
+test_java_matches_fixture_and_endpoint_rules (test_java_protocol.JavaProtocolTests.test_java_matches_fixture_and_endpoint_rules) ... Pure Java protocol/endpoint checks passed: 15 (not an Android app build)
+ok
+test_no_default_pairing_secret (test_manifest.ManifestTests.test_no_default_pairing_secret) ... ok
+test_no_phone_microphone_or_assistant (test_manifest.ManifestTests.test_no_phone_microphone_or_assistant) ... ok
+test_review_default (test_manifest.ManifestTests.test_review_default) ... ok
+test_decoder_matches_python (test_native_codec.NativeCodecTests.test_decoder_matches_python) ... ok
+test_encoder_matches_python (test_native_codec.NativeCodecTests.test_encoder_matches_python) ... ok
+test_gate_limit (test_native_codec.NativeCodecTests.test_gate_limit) ... ok
+test_gate_no_speech (test_native_codec.NativeCodecTests.test_gate_no_speech) ... ok
+test_gate_rejects_dc_offset (test_native_codec.NativeCodecTests.test_gate_rejects_dc_offset) ... ok
+test_gate_speech_then_silence (test_native_codec.NativeCodecTests.test_gate_speech_then_silence) ... ok
+test_accepted_and_duplicate (test_storage_http.HttpTests.test_accepted_and_duplicate) ... ok
+test_auth_rejected (test_storage_http.HttpTests.test_auth_rejected) ... ok
+test_bad_crc (test_storage_http.HttpTests.test_bad_crc) ... ok
+test_bind_guard (test_storage_http.HttpTests.test_bind_guard) ... ok
+test_empty (test_storage_http.HttpTests.test_empty) ... ok
+test_health (test_storage_http.HttpTests.test_health) ... ok
+test_unknown_path (test_storage_http.HttpTests.test_unknown_path) ... ok
+test_wrong_content_type (test_storage_http.HttpTests.test_wrong_content_type) ... ok
+test_claim_once (test_storage_http.StorageTests.test_claim_once) ... ok
+test_collision (test_storage_http.StorageTests.test_collision) ... ok
+test_concurrent_duplicate (test_storage_http.StorageTests.test_concurrent_duplicate) ... ok
+test_duplicate (test_storage_http.StorageTests.test_duplicate) ... ok
+test_durable_reopen (test_storage_http.StorageTests.test_durable_reopen) ... ok
+test_quota (test_storage_http.StorageTests.test_quota) ... ok
+test_receipt_after_purge (test_storage_http.StorageTests.test_receipt_after_purge) ... ok
+test_recover_interrupted_transcription (test_storage_http.StorageTests.test_recover_interrupted_transcription) ... ok
+test_recover_uncertain_delivery (test_storage_http.StorageTests.test_recover_uncertain_delivery) ... ok
+test_review_gate (test_storage_http.StorageTests.test_review_gate) ... ok
+test_agent_failure_uncertain (test_worker.WorkerTests.test_agent_failure_uncertain) ... Review handoff 2dd0f64d-b6a6-4e11-8ebd-6a0764c3ff06 before retry
+Traceback (most recent call last):
+  File "/mnt/data/Hermes-Voice-Button-v0.1/receiver/hvbridge/worker.py", line 56, in once
+    run_process([str(Path(cfg['hermes_executable']).expanduser()),'chat','--query-file',str(prompt_path)],
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                folder/'hermes.log',cfg.get('hermes_timeout',7200),Path(cfg.get('hermes_working_directory',str(Path.home()))).expanduser())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/Hermes-Voice-Button-v0.1/receiver/hvbridge/worker.py", line 19, in run_process
+    if code: raise RuntimeError(f'Process exited {code}; see {out.name}')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Process exited 4; see hermes.log
+ok
+test_approved_safe_argv (test_worker.WorkerTests.test_approved_safe_argv) ... ok
+test_auto (test_worker.WorkerTests.test_auto) ... ok
+test_hermes_capability_check (test_worker.WorkerTests.test_hermes_capability_check) ... ok
+test_missing_model_keeps_audio (test_worker.WorkerTests.test_missing_model_keeps_audio) ... Transcription failed for 114cfcda-b199-4c72-9e00-b0104ca10c62
+Traceback (most recent call last):
+  File "/mnt/data/Hermes-Voice-Button-v0.1/receiver/hvbridge/worker.py", line 35, in once
+    if not Path(model).is_file(): raise ValueError('Download and configure the Whisper model')
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Download and configure the Whisper model
+ok
+test_reject_relative_executable (test_worker.WorkerTests.test_reject_relative_executable) ... ok
+test_review_never_invokes_agent (test_worker.WorkerTests.test_review_never_invokes_agent) ... ok
+test_timeout (test_worker.WorkerTests.test_timeout) ... ok
+
+----------------------------------------------------------------------
+Ran 56 tests in 13.392s
+
+OK

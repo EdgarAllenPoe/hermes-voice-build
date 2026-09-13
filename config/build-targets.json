@@ -1,0 +1,19 @@
+{
+  "phone": "Pixel 9 Pro",
+  "phone_os": "Android 17",
+  "hermes_tailscale_ip": "100.99.200.55",
+  "endpoint": "http://100.99.200.55:8765/v1/voice",
+  "board": "Seeed Studio XIAO nRF54LM20A Sense",
+  "platformio_environment": "seeed-xiao-nrf54lm20a",
+  "zephyr_board": "xiao_nrf54lm20a/nrf54lm20a/cpuapp",
+  "compile_sdk": 36,
+  "target_sdk": 36,
+  "minimum_sdk": 33,
+  "gradle": "8.11.1",
+  "android_gradle_plugin": "8.10.1",
+  "build_tools": "35.0.0",
+  "target_build_executed": true,
+  "hardware_tested": false,
+  "verified_build_run_id": 34752997335,
+  "verified_build_source_commit": "073af6bad44e0519368257abc515aa451c4a65f9"
+}

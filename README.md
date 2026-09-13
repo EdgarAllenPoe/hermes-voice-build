@@ -30,7 +30,7 @@ Each fresh CI build currently creates a new Android test-signing key and recorde
 
 ## Source and verification scope
 
-This repository contains the target-build subset. The complete private delivery kit restores the original configured v0.2 receiver, documentation and host tests alongside this run's target source. That combined source passed **69 host tests** on September 13, 2026. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
+This repository now includes the complete Android and firmware source, Linux receiver, hardware notes, synthetic fixtures, build helpers, and host tests restored from the configured v0.2 delivery kit. Compiled binaries and private delivery material remain outside the repository. That combined source passed **69 host tests** on September 13, 2026. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
 
 The exact tracked source archived by the two CI jobs is byte-identical. The delivery kit includes it separately for provenance. Original manuals/test reports are preserved as dated historical records; the verified build notes and generated configuration supersede earlier target-build status and board-integration assumptions.
 
@@ -39,3 +39,24 @@ The exact tracked source archived by the two CI jobs is byte-identical. The deli
 Start with **USB power and the LiPo disconnected**, the correct board and attached antenna. Verify the generated configuration and measure actual 100 mA / 4.20 V charging behavior before battery operation. The fixed NTC resistor is not a battery-temperature sensor. Follow the full supplied manual's hardware and failure tests.
 
 System-ON idle, 15 committed recorder slots, the 60-second limit, review-first Hermes delivery and Android background limitations remain. Successful compilation does not establish runtime, first-word preservation, safe charging, or end-to-end reliability.
+
+## Work with the complete source
+
+All commands below run from the Git checkout root (the `source/` folder inside the private delivery kit).
+
+- `receiver/`: Linux HTTP inbox, SQLite queue, Whisper transcription, and review-gated Hermes handoff. Setup: [docs/04-server.md](docs/04-server.md).
+- `docs/` and `hardware/`: protocol, setup, commissioning, wiring, and parts notes.
+- `tests/` and `fixtures/`: host tests and synthetic audio; no user recordings.
+- `tools/`, `Build-All.ps1`, and `build-all.sh`: build, test, and diagnostic entry points.
+
+Run the full host suite on Linux with Python 3.10+, GCC, Git, and JDK 17+:
+
+```sh
+bash tools/run_tests.sh
+```
+
+GitHub Actions runs this same suite on pushes and pull requests. The worker uses Linux/POSIX process handling and file locks, so the full suite is not a native Windows test suite. Windows remains supported for the Android/firmware build wrappers and prebuilt-kit installation.
+
+Use `python tools/build_binaries.py --check` to inspect installed target tools before building. The repository includes no compiler toolchains, Whisper model, or server bearer token. `receiver/config.tomstout.json` is a preset with placeholder executable paths and a token-file path; generate the actual token on the receiver host as documented.
+
+`SHA256SUMS.txt` records the public source snapshot. Run `python tools/verify_package.py` before modifying it. These source checksums and the private delivery kit's original checksums describe their respective snapshots; later source edits invalidate the old delivery snapshot's source entries without changing its compiled binaries.

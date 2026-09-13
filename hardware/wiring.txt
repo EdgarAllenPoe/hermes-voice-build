@@ -1,0 +1,17 @@
+HERMES VOICE BUTTON — WIRING NETLIST v0.1
+Board: Seeed Studio XIAO nRF54LM20A SENSE (not plain non-Sense)
+
+BATT_POS: protected 1S 3.7 V LiPo positive -> mating lead -> BAT+
+BATT_NEG: protected LiPo negative -> mating lead -> BAT- / GND
+CAPTURE:  D0 / P1.00 -> momentary switch contact group A
+GROUND:   GND -> momentary switch contact group B
+ANTENNA:  supplied 2.4 GHz FPC IPEX4 -> board antenna connector
+USB:      USB-C for USB programming and charge input
+
+Switch wiring uses a normally-open contact pair and internal pull-up.
+Do not connect the switch to BAT+, 5V, RESET, or microphone pins.
+Check contact pairs with a meter; same-side tactile-switch legs may be common.
+Solder only the disconnected board-side pigtail; verify battery polarity before mating.
+No speaker, external microphone, phone microphone, or extra charger board.
+Charge profile intended: 100 mA / 4.20 V; generated DTS and physical measurement required.
+No real cell temperature measurement: board NTC is a fixed resistor in the referenced schematic.

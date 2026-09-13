@@ -1,0 +1,12 @@
+[Unit]
+Description=Hermes voice transcription and agent handoff
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/hermes-voice/receiver
+ExecStart=/usr/bin/python3 -m hvbridge --config %h/.config/hermes-voice/config.json work
+Restart=on-failure
+RestartSec=10
+UMask=0077
+# Run as the existing Hermes user, never root. Agent tools need its normal home.
+[Install]
+WantedBy=default.target

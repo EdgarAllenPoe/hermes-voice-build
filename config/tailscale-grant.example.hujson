@@ -1,0 +1,12 @@
+// Merge ONE entry into your existing tailnet policy; do not replace the policy.
+// Narrow grants are additive. Remove/adjust any broader rules that already allow
+// other access if strict isolation is required. Keep your administrative access.
+{
+  "grants": [
+    {
+      "src": ["PHONE_TAILSCALE_IP/32"],
+      "dst": ["HERMES_TAILSCALE_IP/32"],
+      "ip": ["tcp:443"] // HTTPS Serve; use tcp:8765 ONLY for direct private HTTP
+    }
+  ]
+}

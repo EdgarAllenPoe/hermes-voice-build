@@ -1,0 +1,12 @@
+[Unit]
+Description=Private Hermes voice inbox
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/hermes-voice/receiver
+ExecStart=/usr/bin/python3 -m hvbridge --config %h/.config/hermes-voice/config.json serve
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+[Install]
+WantedBy=default.target
