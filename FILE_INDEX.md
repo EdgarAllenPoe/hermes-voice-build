@@ -112,6 +112,7 @@
 - tests/test_audio.py
 - tests/test_build_package.py
 - tests/test_button.py
+- tests/test_flash_prebuilt.py
 - tests/test_flash_simulation.py
 - tests/test_identity.py
 - tests/test_java_protocol.py
@@ -126,6 +127,7 @@
 - tests/test_worker.py
 - tools/audio_tool.py
 - tools/bootstrap-gradle.sh
+- tools/bootstrap_gradle.py
 - tools/build-android.ps1
 - tools/build-android.sh
 - tools/build_binaries.py
@@ -133,6 +135,7 @@
 - tools/ci_package.py
 - tools/desktop_ble_receiver.py
 - tools/evaluate_speech.py
+- tools/flash_prebuilt.py
 - tools/freeze-environment.sh
 - tools/prepare-whisper.sh
 - tools/provision.py
