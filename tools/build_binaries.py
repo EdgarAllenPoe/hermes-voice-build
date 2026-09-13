@@ -150,7 +150,7 @@ def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -
     command = [tools['gradle'], '-p', str(ROOT / 'android'), '--no-daemon']
     if offline:
         command.append('--offline')
-    # A personal test build, signed by Gradle with this machine's debug key.
+    # Personal builds retain the selected signing key; CI uses its isolated identity.
     command += [':app:clean', ':app:assembleDebug', ':app:lintDebug']
     try:
         run(command, logs / 'android-build.txt', env)
@@ -166,7 +166,7 @@ def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -
     verify_apk_structure(apk)
     run([tools['apksigner'], 'verify', '--verbose', '--print-certs', str(apk)], logs / 'apk-signature.txt', env)
     shutil.copy2(apk, out / ('Hermes-Voice-0.3.0-ci.apk' if env.get('HVB_CI_BUILD')=='1' else 'Hermes-Voice-0.3.0-test.apk'))
-    # Retain the key at ~/.android/debug.keystore for compatible future updates.
+    # Retain the selected personal keystore for compatible future updates.
 
 
 def build_firmware(tools: dict[str, str], out: Path, logs: Path, offline: bool) -> None:

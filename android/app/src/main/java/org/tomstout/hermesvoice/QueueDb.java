@@ -7,7 +7,7 @@ final class QueueDb extends SQLiteOpenHelper {
     QueueDb(Context c){
         super(c,"voice_queue.db",2,new SQLiteDatabase.OpenParams.Builder()
             .addOpenFlags(SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING)
-            .setSynchronousMode("FULL").build());
+            .setSynchronousMode(SQLiteDatabase.SYNC_MODE_FULL).build());
     }
     @Override public void onCreate(SQLiteDatabase db){
         db.execSQL("CREATE TABLE messages(id TEXT PRIMARY KEY,sha TEXT NOT NULL,audio BLOB,state TEXT NOT NULL,created INTEGER NOT NULL,error TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_try INTEGER NOT NULL DEFAULT 0)");
