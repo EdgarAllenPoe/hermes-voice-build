@@ -102,7 +102,7 @@ Documented chat --query-file adapter. Confirm that the installed Hermes product 
 
 https://github.com/Seeed-Studio/platform-seeedboards
 
-Vendor board support used by the uncompiled firmware target; freeze actual working versions after a successful build.
+Vendor board support used by the compiled firmware target. The platform is pinned in firmware/platformio.ini; retain resolved dependency versions with each build.
 
 ## [S18] Adafruit mating battery lead, product 3814
 
@@ -133,3 +133,35 @@ API 36 device-presence event handling in the Android source.
 https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/main/boards/seeed/xiao_nrf54lm20a/xiao_nrf54lm20a_nrf54lm20a-common.dtsi
 
 Cross-check of charger hierarchy. Upstream and vendor board-support labels/settings differ; this is not a substitute for verifying the generated build device tree.
+
+
+## Version 0.3 implementation references (checked September 13, 2026)
+
+### [S23] Android SQLite connection configuration
+
+https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.OpenParams.Builder
+https://developer.android.com/reference/android/database/sqlite/SQLiteOpenHelper
+https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase
+
+FULL synchronization is configured through OpenParams for the connection pool. Setting the PRAGMA alone in onConfigure did not retain FULL under Android WAL configuration; the API 35 emulator test caught this and now verifies FULL and WAL after write/reopen.
+
+### [S24] Android instrumented tests and emulator runner
+
+https://developer.android.com/training/testing/instrumented-tests/androidx-test-libraries/runner
+https://github.com/ReactiveCircus/android-emulator-runner
+
+Real QueueDb migration and receipt tests run in an isolated CI package. The runner action is pinned by commit in the workflow.
+
+### [S25] Public Whisper speech benchmark
+
+https://github.com/ggml-org/whisper.cpp/tree/v1.7.6
+
+The speech workflow builds this fixed version, downloads tiny.en, and compares original and HVB1-compressed forms of the upstream JFK sample. The production preparation helper still selects small; benchmark results do not establish production-model or personal speech accuracy.
+
+### [S26] Workshop setup references
+
+https://developer.android.com/studio/intro/update#sdk-manager
+https://developer.android.com/studio/publish/app-signing
+https://tailscale.com/docs/reference/tailscale-cli/serve
+
+SDK installation, retaining Android update identity, and private receiver forwarding. The workshop guide includes its own compact reference list for printing.

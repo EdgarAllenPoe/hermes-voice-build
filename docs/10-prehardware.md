@@ -1,6 +1,6 @@
 # Prehardware improvements in version 0.3
 
-Version 0.3 retains the HVB1 recording format. Hardware remains untested.
+Version 0.3 retains the HVB1 recording format. Hardware remains untested. See the [current test report](../TEST_REPORT_v0.3.md) for executed results and the [workshop guide](HARDWARE-GUIDE.md) for wiring, programming and test worksheets.
 
 ## What changed
 
@@ -19,7 +19,7 @@ Version 0.3 retains the HVB1 recording format. Hardware remains untested.
 
 Run bash tools/run_tests.sh on Linux with Python, GCC, Git and JDK 17+. The suite exercises real codec, storage and button C code through host shims; actual electrical timing is not simulated.
 
-The Android database tests run against real SQLite on an API 35 emulator in an isolated CI app. They verify schema 1 migration, durable reopening, held-message progress, retry eligibility and receipt deduplication. This does not establish Bluetooth operation or Android 17 locked-phone behavior.
+The Android database tests run against real SQLite on an API 35 emulator in an isolated CI app. They verify schema 1 migration, durable reopening, held-message progress, retry eligibility, receipt deduplication, and FULL synchronization with WAL. Android OpenParams configures this durability setting for the connection pool. This does not establish Bluetooth operation or Android 17 locked-phone behavior.
 
 The speech workflow uses upstream whisper.cpp v1.7.6, its public JFK sample and tiny.en. The report includes source, executable and model hashes and original/compressed word errors. This is a real transcription smoke test, not evidence of accuracy for your voice, room, phone, recorder microphone or the production small model. Keep private speech and reports in ignored speech-eval/.
 
@@ -60,3 +60,10 @@ Choose approve OR reject. Only review-state transcripts can be edited or rejecte
     systemctl --user start hermes-voice-worker.service
 
 The preview lists exactly the eligible IDs and known files. Applying deletes only audio.wav, transcript.txt, prompt.txt, whisper.log and hermes.log for old done/rejected messages and clears their database content. Other files, pending work and receipts remain. This is not secure erasure of SQLite pages, backups or Hermes history. Back up deliberately before cleanup.
+
+
+## Rebuild the printable guide
+
+The DOCX and Markdown guide are generated from docs/hardware-guide.json by tools/build_hardware_guide.py using python-docx. The wiring PNG comes from the adjacent original SVG. Regenerate the DOCX after changing the text or diagram, then check every rendered page before claiming print-layout verification. The authoring environment used python-docx 1.2.0; this is a document-generation dependency, not an application/runtime dependency.
+
+The guide uses US Letter paper with 0.8-inch side margins, numbered workshop stages, wiring labels and spaces for measurement/results. Keep generated page previews outside the public repository; only the guide and its public source assets belong in Git.

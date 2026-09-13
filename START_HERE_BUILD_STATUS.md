@@ -1,3 +1,5 @@
+> **Current version 0.3:** See [TEST_REPORT_v0.3.md](TEST_REPORT_v0.3.md) for current software checks and [the workshop guide](docs/HARDWARE-GUIDE.md) for wiring, programming and physical acceptance. The text below is retained as historical provenance.
+
 > **Historical record:** The original text below describes an earlier authoring session. Both targets subsequently compiled in run `34752997335`; see [README.md](README.md) and [VERIFIED_BUILD.md](VERIFIED_BUILD.md) for current status. Physical hardware acceptance remains outstanding.
 
 # Hermes Voice Button — configured source and build scripts

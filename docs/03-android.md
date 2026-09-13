@@ -4,7 +4,9 @@
 
 The project uses JDK 17, Gradle 8.11.1, Android Gradle Plugin 8.10.1, compile/target SDK 36 and minimum SDK 33. These are deliberate baseline choices, not a claim to use the newest available tools. Google's AGP 8.10 documentation supports API 36 and specifies the matching toolchain requirements [S19].
 
-The app has no AndroidX or third-party runtime dependencies. SDK/build dependencies still need to be downloaded. A Gradle wrapper binary is **not** included; use the provided verified-download helper or install the exact Gradle distribution yourself.
+The app has no third-party runtime dependencies. AndroidX is enabled for the separate emulator test dependencies. SDK/build/test dependencies still need to be downloaded. A Gradle wrapper binary is **not** included; use the provided verified-download helper or install the exact Gradle distribution yourself.
+
+Personal builds require the retained signing key before Gradle configuration. Restore it using guide 10; the full Windows workflow is in [the workshop guide](HARDWARE-GUIDE.md). CI builds use a separate disposable package and do not update the personal app.
 
 ### Linux/macOS build workstation
 
@@ -13,7 +15,7 @@ Install JDK 17 and Android SDK command-line tools. Set `JAVA_HOME` and `ANDROID_
 ```sh
 sdkmanager --licenses
 sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
-cd /path/to/Hermes-Voice-Button-v0.1
+cd /path/to/hermes-voice-build
 bash tools/bootstrap-gradle.sh
 bash tools/build-android.sh
 ```
@@ -89,7 +91,7 @@ Test the exact phone/Android version. The companion and connected-device APIs ar
 
 The bearer token is encrypted using an Android Keystore AES-GCM key without per-use biometric authentication so the relay can operate while locked after first unlock. Queued audio remains inside app-private, credential-protected storage; it is not separately content-encrypted by this application. App backups are disabled. Copying the app's data elsewhere or uninstalling the app can lose undelivered recordings.
 
-Phone receipts are retained after server acceptance, while their audio BLOB is cleared. Temporary partial files are removed after recorder ACK completion, or reused on reconnection. No transcript/chat screen is included in version 1.
+Phone receipts are retained after server acceptance, while their audio BLOB is cleared. Temporary partial files are removed after recorder ACK completion, or reused on reconnection. Transcript inspection and editing are available through the Linux receiver CLI; the Android app remains a relay.
 
 ## Version 0.3 diagnostics and queue recovery
 

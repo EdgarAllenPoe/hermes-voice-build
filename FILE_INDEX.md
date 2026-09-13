@@ -25,6 +25,7 @@
 - START_HERE_BUILD_STATUS.md
 - TEST_REPORT.md
 - TEST_REPORT_v0.2.md
+- TEST_REPORT_v0.3.md
 - USER_CONFIGURATION.md
 - VERIFIED_BUILD.md
 - android/app/build.gradle
@@ -63,7 +64,12 @@
 - docs/08-troubleshooting.md
 - docs/09-security.md
 - docs/10-prehardware.md
+- docs/HARDWARE-GUIDE.md
+- docs/Hermes-Voice-Hardware-Guide.docx
+- docs/hardware-guide.json
 - docs/host-tests.txt
+- docs/wiring-diagram.png
+- docs/wiring-diagram.svg
 - firmware/patch_pio_zephyr.py
 - firmware/platformio.ini
 - firmware/src/ble.c
@@ -131,6 +137,7 @@
 - tools/build-android.ps1
 - tools/build-android.sh
 - tools/build_binaries.py
+- tools/build_hardware_guide.py
 - tools/check_firmware_dts.py
 - tools/ci_package.py
 - tools/desktop_ble_receiver.py

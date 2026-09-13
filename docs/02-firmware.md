@@ -11,11 +11,12 @@ python3 -m venv ~/.venvs/hermes-build
 . ~/.venvs/hermes-build/bin/activate
 python -m pip install "platformio==6.1.18"
 cd /path/to/hermes-voice-build
-python3 tools/provision.py
-pio run -d firmware
+python3 tools/build_binaries.py --target firmware
 ```
 
 `platformio.ini` selects environment `seeed-xiao-nrf54lm20a` and framework `zephyr`. The vendor platform is pinned to commit `1ec1287f8e4bc4067a6fd593991e36875aef989f`, used by the selected compiled build. Keep the resolved package versions and generated hardware configuration with each later build; the pin does not lock every transitive dependency. Guide 07 covers offline caching.
+
+For the personal recorder, first restore the retained identity as described in [guide 10](10-prehardware.md). A fresh identity is appropriate only for a new recorder, not an accidental replacement of the existing pairing pair.
 
 There is no shared shipping BLE passkey. The tracked `firmware/src/device_config.example.h` contains only a build-error guard. Provisioning creates `firmware/src/device_config.h` with a locally random code; that generated file is ignored and is not tracked. A fresh checkout does not contain it. The build helper automatically provisions a fresh checkout when needed. Print `config/private/pairing-card.txt` privately and retain it. Re-running provision requires `--force`, rotates the code and requires re-pairing. Do not commit the generated header or pairing card to a public repository.
 
@@ -51,15 +52,18 @@ The BLE compiler workaround flags included with this project come from Seeed's c
 
 ## Flashing and first boot
 
-With the battery disconnected and the supplied antenna attached:
+Use the explicit prebuilt-bundle helper described in the [printable workshop guide](HARDWARE-GUIDE.md). Keep the battery disconnected and attach the supplied antenna. Replace the path below with the exact successful timestamped build directory:
 
 ```sh
-pio run -d firmware -t upload
+python3 tools/flash_prebuilt.py --bundle /absolute/path/to/successful/dist-folder
+python3 tools/flash_prebuilt.py --bundle /absolute/path/to/successful/dist-folder --flash
 ```
 
-Use the upload method supplied by the installed vendor package for this board. Do not erase the external flash blindly to fix an unrelated compiler problem. The firmware itself claims the recording partition; first installation is destructive to unrelated prior contents there.
+The first command only verifies hashes and generated configuration; it does not access hardware. The second verifies the exact vendor loader, disables its automatic mass-erase recovery hook, and requires the displayed typed confirmation before writing and verifying the HEX. Install the pinned PlatformIO OpenOCD 3.1200.x package as described in the workshop guide.
 
-Initially test the onboard user button. Confirm microphone rail behavior, usable audio, no short circuits and expected LED response before connecting the external button or battery. For troubleshooting, use a debugger or temporarily enable a verified vendor console configuration; the normal build disables serial console output. No successful flash or boot has been claimed for this bundle.
+Preserve wanted recordings and any prior external-flash data before programming. Stop on a locked or unrecognized board instead of using a guessed recovery command. On first use, the application claims its external-flash recording partition. Begin with USB-only tests; no successful physical flash or boot has been claimed.
+
+For troubleshooting, use a debugger or temporarily enable a verified vendor console configuration; the normal build disables serial console output.
 
 ## Controls
 
@@ -78,7 +82,7 @@ The 60-second limit includes pre-roll. The energy gate is deliberately simple; a
 
 ## Code map
 
-`main.c` handles buttons, microphone setup, buffering, gating and the background maintenance loop. `codec.c` is a portable ADPCM encoder/decoder and energy gate. `storage.c` manages commit-last flash slots and erase-after-ACK. `ble.c` exposes the authenticated GATT protocol. `device_config.h` supplies the locally generated pairing code. `prj.conf` and overlays define board integration.
+`main.c` handles microphone setup, buffering, gating and the background maintenance loop. `button.c` implements the tested gesture timing. `codec.c` is a portable ADPCM encoder/decoder and energy gate. `storage.c` manages commit-last flash slots and erase-after-ACK. `ble.c` exposes the authenticated GATT protocol. `device_config.h` supplies the locally generated pairing code. `prj.conf` and overlays define board integration.
 
 Idle is System ON, not System OFF. A microphone rail and radio connection are not assumed to become zero-power just because the main loop sleeps. Do not advertise a battery-life estimate until measuring the finished firmware.
 
@@ -86,8 +90,10 @@ Idle is System ON, not System OFF. A microphone rail and radio connection are no
 
 There are 15 slots. Red on capture can mean no free slot, microphone/flash initialization failure or another capture error; it is not a detailed error code. Check phone queue status and BLE bench diagnostics before deleting anything. A partial power-interrupted capture is not exposed as a committed message.
 
-A committed file that fails the phone's checksum is not acknowledged. The phone discards its partial download and retries, while the recorder keeps the original. Repeated identical failures suggest corrupt flash or a protocol bug; preserve the device state for diagnosis instead of adding an automatic “delete bad message” shortcut.
+A committed file that fails the phone's checksum is not acknowledged. Version 0.3 preserves an invalid completed download privately for diagnosis and retries while the recorder keeps the original. After three failures, supported firmware can skip that recording for the current connection so later recordings can transfer; this does not ACK or erase the bad recording. Repeated identical failures suggest corrupt flash or a protocol bug; preserve the device state for diagnosis instead of adding an automatic “delete bad message” shortcut.
 
 ## Board power enable
 
-The application explicitly enables the vendor `power_en` regulator and allows 20 ms settling before BLE initialization, following the manufacturer board example [S3]. The microphone rail is managed separately. If the selected board package lacks either node label, reconcile that board-support integration rather than commenting out the checks.
+The application explicitly enables the vendor `vsys_3v3` regulator and allows 20 ms settling before BLE initialization, following the manufacturer board example [S3]. The microphone rail is managed separately. If the selected board package lacks either node label, reconcile that board-support integration rather than commenting out the checks.
+
+Version 0.3 moves button timing to button.c, validates committed CRCs on boot, and reports quarantined slots through INFO. Guide 10 describes non-destructive SKIP and the new counters.

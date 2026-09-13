@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520">
+<rect width="1120" height="520" fill="white"/>
+<g font-family="Arial" font-size="23" fill="black" stroke="none">
+<rect x="390" y="100" width="330" height="310" fill="#f4f4f4" stroke="black" stroke-width="2"/>
+<text x="555" y="155" text-anchor="middle">XIAO nRF54LM20A</text><text x="555" y="185" text-anchor="middle">Sense</text>
+<text x="410" y="248">D0</text><text x="410" y="328">GND</text>
+<text x="700" y="248" text-anchor="end">BAT+</text><text x="700" y="328" text-anchor="end">BAT-</text>
+<text x="555" y="385" text-anchor="middle">Onboard microphone</text>
+<rect x="25" y="205" width="245" height="155" fill="white" stroke="black" stroke-width="2"/>
+<text x="147" y="234" text-anchor="middle">Momentary switch</text>
+<text x="147" y="270" text-anchor="middle">Contact group A</text><text x="147" y="326" text-anchor="middle">Contact group B</text>
+<rect x="845" y="200" width="250" height="165" fill="white" stroke="black" stroke-width="2"/>
+<text x="970" y="231" text-anchor="middle">Protected 1S LiPo</text>
+<text x="970" y="263" text-anchor="middle">Positive</text><text x="970" y="325" text-anchor="middle">Negative</text>
+<text x="552" y="43" text-anchor="middle">Supplied antenna</text><text x="685" y="77">IPEX4</text>
+<text x="130" y="70" text-anchor="middle">Computer USB</text>
+<text x="150" y="460">Switch released = open circuit; pressed = contacts joined</text>
+<text x="560" y="500" text-anchor="middle" font-size="21">Connection schematic only. Follow the board pad labels and verify battery polarity</text>
+</g><g fill="none" stroke="black" stroke-width="3">
+<path d="M270 255 H330 V240 H390"/><path d="M270 315 H330 V320 H390"/>
+<path d="M720 240 H790 V255 H845"/><path d="M720 320 H845"/>
+<path d="M555 52 V100"/><path d="M205 75 H320 V120 H390"/>
+</g></svg>

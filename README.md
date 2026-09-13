@@ -2,7 +2,7 @@
 
 ## Version 0.3 source
 
-Version 0.3 adds simulated recorder tests, a worker-thread Android relay, safe queue migration and per-message holds, firmware corruption quarantine and diagnostics, stable personal build identities, transcript review commands, fair worker scheduling, deliberate cleanup, and a speech comparison tool. Start with [the prehardware guide](docs/10-prehardware.md). The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx).
+Version 0.3 adds simulated recorder tests, a worker-thread Android relay, safe queue migration and per-message holds, firmware corruption quarantine and diagnostics, stable personal build identities, transcript review commands, fair worker scheduling, deliberate cleanup, and a speech comparison tool. Start with [the prehardware guide](docs/10-prehardware.md) and [the current test report](TEST_REPORT_v0.3.md). The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx), with a [browsable text version](docs/HARDWARE-GUIDE.md).
 
 Hardware is still on order. Software checks and successful builds do not establish microphone, Bluetooth, charging, or battery behavior. The separately delivered v0.2 binaries below are preserved and do not contain the new v0.3 behavior. Build v0.3 from source with the retained personal identity before using its new features.
 
@@ -36,7 +36,7 @@ CI builds now use a separate disposable Android package (org.tomstout.hermesvoic
 
 ## Source and verification scope
 
-This repository now includes the complete Android and firmware source, Linux receiver, hardware notes, synthetic fixtures, build helpers, and host tests restored from the configured v0.2 delivery kit. Compiled binaries and private delivery material remain outside the repository. That combined source passed **69 host tests** on September 13, 2026. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
+This repository now includes the complete Android and firmware source, Linux receiver, hardware notes, synthetic fixtures, build helpers, and host tests restored from the configured v0.2 delivery kit. Compiled binaries and private delivery material remain outside the repository. The current version 0.3 source passes **121 host tests** and **6 Android emulator database tests**. The original restoration passed 69 tests; these dated results should not be confused with the expanded current suite. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
 
 The exact tracked source archived by the two CI jobs is byte-identical. The delivery kit includes it separately for provenance. Original manuals/test reports are preserved as dated historical records; the verified build notes and generated configuration supersede earlier target-build status and board-integration assumptions.
 
