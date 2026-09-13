@@ -1,0 +1,36 @@
+package org.tomstout.hermesvoice;
+import android.content.*;
+import android.security.keystore.*;
+import android.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
+/** Secrets remain usable after the first post-boot unlock, including while locked. */
+final class Settings {
+    static final String DEFAULT_ENDPOINT="http://100.99.200.55:8765/v1/voice";
+    static String endpoint(Context c){return prefs(c).getString("endpoint",DEFAULT_ENDPOINT);}
+    static SharedPreferences prefs(Context c){return c.getSharedPreferences("settings",Context.MODE_PRIVATE);}
+    static boolean enabled(Context c){return prefs(c).getBoolean("enabled",false);}
+    static void status(Context c,String s){prefs(c).edit().putString("status",s).apply();}
+    static SecretKey key() throws Exception {
+        KeyStore ks=KeyStore.getInstance("AndroidKeyStore");ks.load(null);
+        if(!ks.containsAlias("hermes_voice_token")) {
+            KeyGenerator g=KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,"AndroidKeyStore");
+            g.init(new KeyGenParameterSpec.Builder("hermes_voice_token",KeyProperties.PURPOSE_ENCRYPT|KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).setUserAuthenticationRequired(false).build());g.generateKey();
+        }
+        return (SecretKey)ks.getKey("hermes_voice_token",null);
+    }
+    static void token(Context c,String s)throws Exception {
+        if(s.length()<32)throw new IllegalArgumentException("Token must contain at least 32 characters");
+        Cipher x=Cipher.getInstance("AES/GCM/NoPadding");x.init(Cipher.ENCRYPT_MODE,key());
+        prefs(c).edit().putString("token",Base64.encodeToString(x.doFinal(s.getBytes(StandardCharsets.UTF_8)),Base64.NO_WRAP))
+            .putString("iv",Base64.encodeToString(x.getIV(),Base64.NO_WRAP)).commit();
+    }
+    static String token(Context c)throws Exception {
+        SharedPreferences p=prefs(c);if(!p.contains("token"))throw new IllegalStateException("Server token is not configured");
+        Cipher x=Cipher.getInstance("AES/GCM/NoPadding");x.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,Base64.decode(p.getString("iv",""),Base64.NO_WRAP)));
+        return new String(x.doFinal(Base64.decode(p.getString("token",""),Base64.NO_WRAP)),StandardCharsets.UTF_8);
+    }
+}

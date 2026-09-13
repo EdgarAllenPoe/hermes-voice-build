@@ -1,0 +1,17 @@
+/* Charge configuration: 4.20 V, 100 mA for the selected protected 350 mAh cell.
+ * Source: Zephyr nordic,npm1300-charger binding. Check generated DTS and measure.
+ * Seeed BSP child name is verified during the mandatory preflight/build step.
+ */
+&pmic {
+    charger {
+        compatible = "nordic,npm1300-charger";
+        status = "okay";
+        term-microvolt = <4200000>;
+        current-microamp = <100000>;
+        dischg-limit-microamp = <200000>;
+        vbus-limit-microamp = <500000>;
+        thermistor-ohms = <10000>;
+        thermistor-beta = <3380>;
+        charging-enable;
+    };
+};

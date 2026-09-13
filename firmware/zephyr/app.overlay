@@ -1,0 +1,30 @@
+#include <zephyr/dt-bindings/gpio/gpio.h>
+/ {
+    chosen { zephyr,bt-hci = &bt_hci_controller; zephyr,settings-partition = &hvb_settings; };
+    voice_keys {
+        compatible = "gpio-keys";
+        hvb_button: capture_button { gpios = <&gpio1 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; label = "Hermes capture"; };
+    };
+    aliases { voice-button = &hvb_button; };
+};
+&pdm20 { status = "okay"; };
+&bt_hci_controller { status = "okay"; };
+&py25q64 {
+    status = "okay";
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        hvb_audio: partition@0 { label = "hvb-audio"; reg = <0x000000 0x780000>; };
+        hvb_settings: partition@780000 { label = "hvb-settings"; reg = <0x780000 0x80000>; };
+    };
+};
+/* Board label supplied by the Seeed PlatformIO BSP; leave main power rail on. */
+&dmic_vdd {
+    regulator-min-microvolt = <3300000>;
+    regulator-max-microvolt = <3300000>; /delete-property/ regulator-boot-on; };
+&pwm20 { status = "disabled"; };
+&uart20 { status = "disabled"; };
+/* Review the generated charger settings with tools/check_firmware_dts.py
+ * and complete the hardware commissioning checklist BEFORE attaching a cell. */
+#include "charger.overlay"

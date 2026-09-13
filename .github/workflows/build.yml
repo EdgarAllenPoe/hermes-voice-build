@@ -1,0 +1,102 @@
+name: Build APK and XIAO firmware
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'firmware/**'
+      - 'tools/build_binaries.py'
+      - 'tools/ci_package.py'
+      - 'tools/provision.py'
+      - 'tools/check_firmware_dts.py'
+      - 'tools/bootstrap-gradle.sh'
+      - 'config/build-recipient.crt.pem'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hermes-build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [android, firmware]
+    env:
+      TARGET: ${{ matrix.target }}
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PLATFORMIO_SETTING_ENABLE_TELEMETRY: 'No'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Set up JDK 17
+        if: matrix.target == 'android'
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Android tools
+        if: matrix.target == 'android'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_HOME"
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0' </dev/null
+          bash tools/bootstrap-gradle.sh
+          echo "GRADLE_BIN=$GITHUB_WORKSPACE/.tools/gradle-8.11.1/bin/gradle" >> "$GITHUB_ENV"
+      - name: Prepare exact-board firmware tools
+        if: matrix.target == 'firmware'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'platformio==6.1.18'
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ninja-build gperf device-tree-compiler libusb-1.0-0
+      - name: Provision a private recorder passkey
+        if: matrix.target == 'firmware'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/provision.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path('firmware/src/device_config.h').read_text()
+          code = re.search(r'#define HVB_PAIRING_CODE ([0-9]{6})U', text).group(1)
+          print('::add-mask::' + code)
+          PY
+      - name: Compile and verify target
+        shell: bash
+        run: python tools/build_binaries.py --target "$TARGET"
+      - name: Encrypt private material and collect build records
+        if: always()
+        shell: bash
+        run: python tools/ci_package.py "$TARGET"
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hermes-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publish/${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          echo '## Build record' >> "$GITHUB_STEP_SUMMARY"
+          echo 'A successful compilation is not a hardware acceptance test. Firmware and signing material are encrypted to the private build recipient.' >> "$GITHUB_STEP_SUMMARY"
+          if test -f "publish/$TARGET/build-result.json"; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat "publish/$TARGET/build-result.json" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
