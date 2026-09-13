@@ -4,8 +4,11 @@ import android.database.*;
 import android.database.sqlite.*;
 /** FULL synchronous commit precedes every recorder ACK. Migrations retain audio. */
 final class QueueDb extends SQLiteOpenHelper {
-    QueueDb(Context c){super(c,"voice_queue.db",null,2);setWriteAheadLoggingEnabled(true);}
-    @Override public void onConfigure(SQLiteDatabase db){db.execSQL("PRAGMA synchronous=FULL");}
+    QueueDb(Context c){
+        super(c,"voice_queue.db",2,new SQLiteDatabase.OpenParams.Builder()
+            .addOpenFlags(SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING)
+            .setSynchronousMode("FULL").build());
+    }
     @Override public void onCreate(SQLiteDatabase db){
         db.execSQL("CREATE TABLE messages(id TEXT PRIMARY KEY,sha TEXT NOT NULL,audio BLOB,state TEXT NOT NULL,created INTEGER NOT NULL,error TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_try INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE INDEX queue_due ON messages(state,next_try,created)");

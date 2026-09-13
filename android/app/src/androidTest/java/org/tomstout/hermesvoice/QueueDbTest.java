@@ -66,8 +66,16 @@ public final class QueueDbTest {
         }
     }
     @Test public void fullSynchronizationIsEnabled(){
-        try(QueueDb d=new QueueDb(context);Cursor c=d.getWritableDatabase().rawQuery("PRAGMA synchronous",null)){
-            assertTrue(c.moveToFirst());assertEquals(2,c.getInt(0));
+        for(int reopen=0;reopen<2;reopen++){
+            try(QueueDb d=new QueueDb(context)){
+                d.accept(audio(reopen+1));
+                try(Cursor c=d.getWritableDatabase().rawQuery("PRAGMA synchronous",null)){
+                    assertTrue(c.moveToFirst());assertEquals(2,c.getInt(0));
+                }
+                try(Cursor c=d.getWritableDatabase().rawQuery("PRAGMA journal_mode",null)){
+                    assertTrue(c.moveToFirst());assertEquals("wal",c.getString(0));
+                }
+            }
         }
     }
 }
