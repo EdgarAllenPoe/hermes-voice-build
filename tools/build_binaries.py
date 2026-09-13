@@ -172,11 +172,25 @@ def build_firmware(tools: dict[str, str], out: Path, logs: Path, offline: bool) 
         raise RuntimeError('Cannot unambiguously identify generated zephyr.dts; inspect the build before flashing.')
     run([sys.executable, str(ROOT / 'tools/check_firmware_dts.py'), str(dts[0])], logs / 'charger-dts-check.txt')
     elf, hexfile, binary = (build / ('firmware.' + suffix) for suffix in ('elf', 'hex', 'bin'))
-    for path in (elf, hexfile, binary):
+    for path in (elf, hexfile):
         if not path.is_file() or not path.stat().st_size:
             raise RuntimeError(f'Expected output not found: {path}. Inspect the actual vendor build output; do not rename source files.')
     verify_elf(elf)
     verify_hex(hexfile)
+    if not binary.is_file():
+        # This pinned Nordic PlatformIO build emits ELF and HEX by default.
+        # Convert the actual linked ARM ELF with its installed vendor objcopy;
+        # never create a placeholder or rename source/text as a raw image.
+        packages = Path(os.environ.get('PLATFORMIO_PACKAGES_DIR') or
+                        str(Path(os.environ.get('PLATFORMIO_CORE_DIR') or str(Path.home() / '.platformio')) / 'packages'))
+        name = 'arm-none-eabi-objcopy.exe' if os.name == 'nt' else 'arm-none-eabi-objcopy'
+        objcopy = packages / 'toolchain-gccarmnoneeabi' / 'bin' / name
+        if not objcopy.is_file():
+            raise RuntimeError(f'Installed ARM objcopy not found: {objcopy}; cannot derive the optional raw image safely.')
+        run([str(objcopy), '--version'], logs / 'arm-objcopy-version.txt')
+        run([str(objcopy), '-O', 'binary', str(elf), str(binary)], logs / 'firmware-bin-conversion.txt')
+    if not binary.is_file() or not binary.stat().st_size:
+        raise RuntimeError('The linked ELF did not produce a nonempty raw firmware image.')
     for path in (elf, hexfile, binary):
         shutil.copy2(path, out / ('Hermes-Voice-XIAO-nRF54LM20A-Sense.' + path.suffix[1:]))
     shutil.copy2(dts[0], out / 'generated-zephyr.dts')
