@@ -1,0 +1,53 @@
+name: Firmware-only build
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/firmware-retry.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  firmware:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PLATFORMIO_SETTING_ENABLE_TELEMETRY: 'No'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install firmware tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'platformio==6.1.18'
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ninja-build gperf device-tree-compiler libusb-1.0-0
+      - name: Provision private passkey
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/provision.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          code = re.search(r'#define HVB_PAIRING_CODE ([0-9]{6})U', Path('firmware/src/device_config.h').read_text()).group(1)
+          print('::add-mask::' + code)
+          PY
+      - name: Compile and verify firmware
+        run: python tools/build_binaries.py --target firmware
+      - name: Encrypt private outputs and collect logs
+        if: always()
+        run: python tools/ci_package.py firmware
+      - name: Upload encrypted firmware and build record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hermes-firmware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publish/firmware/
+          if-no-files-found: error
+          retention-days: 30
