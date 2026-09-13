@@ -90,3 +90,9 @@ Test the exact phone/Android version. The companion and connected-device APIs ar
 The bearer token is encrypted using an Android Keystore AES-GCM key without per-use biometric authentication so the relay can operate while locked after first unlock. Queued audio remains inside app-private, credential-protected storage; it is not separately content-encrypted by this application. App backups are disabled. Copying the app's data elsewhere or uninstalling the app can lose undelivered recordings.
 
 Phone receipts are retained after server acceptance, while their audio BLOB is cleared. Temporary partial files are removed after recorder ACK completion, or reused on reconnection. No transcript/chat screen is included in version 1.
+
+## Version 0.3 diagnostics and queue recovery
+
+Use Test server connection before pairing to verify the configured server/token. Refresh status shows phone queue usage, connection, transfer progress and the last recorder snapshot. Export diagnostics writes only the diagnostic allowlist; it excludes credentials, endpoint, Bluetooth address and audio. Review held uploads explains permanent per-message rejections and offers explicit retry after the cause is corrected. Pending recordings use bounded backoff; Retry queued uploads makes them eligible immediately. Android scheduling can still delay background work.
+
+Schema 1 databases are upgraded in place to schema 2, retaining existing audio and receipts. Personal v0.3 builds must use the original signing key. The CI app has a separate package and is intended for disposable software testing. See guide 10.

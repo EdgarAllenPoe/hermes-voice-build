@@ -9,12 +9,15 @@ def main():
     p=argparse.ArgumentParser(description='Hermes Voice Button bridge')
     p.add_argument('--config',required=True,type=Path)
     sub=p.add_subparsers(dest='command',required=True)
-    for cmd in ['serve','work','status','check']: sub.add_parser(cmd)
-    for cmd in ['approve','retry','export']:
+    for cmd in ['serve','work','status','check','storage']: sub.add_parser(cmd)
+    for cmd in ['approve','retry','export','show','reject','edit']:
         s=sub.add_parser(cmd);s.add_argument('id')
         if cmd=='retry': s.add_argument('--allow-uncertain',action='store_true')
+        if cmd=='edit': s.add_argument('--transcript-file',required=True,type=Path)
         if cmd=='export': s.add_argument('output',type=Path)
     g=sub.add_parser('purge-audio');g.add_argument('--older-than-days',type=int,required=True)
+    g=sub.add_parser('cleanup');g.add_argument('--older-than-days',type=int,required=True)
+    g.add_argument('--apply',action='store_true',help='Delete completed work after stopping worker; default previews')
     a=p.parse_args();cfg=json.loads(a.config.expanduser().read_text())
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(levelname)s %(message)s')
     state=Path(cfg['state_directory']).expanduser();state.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -27,6 +30,13 @@ def main():
         loop(store,cfg,state/'work')
     elif a.command=='status':
         print(json.dumps(store.rows(),indent=2))
+    elif a.command=='storage': print(json.dumps(store.report(),indent=2))
+    elif a.command=='show': print(json.dumps(store.review(a.id),ensure_ascii=False,indent=2))
+    elif a.command=='edit': store.edit_transcript(a.id,a.transcript_file.read_text(encoding='utf-8'))
+    elif a.command=='reject': store.reject(a.id)
+    elif a.command=='cleanup':
+        from .maintenance import cleanup
+        print(json.dumps(cleanup(store,state/'work',a.older_than_days,a.apply),indent=2))
     elif a.command=='approve': store.approve(a.id)
     elif a.command=='retry': store.retry(a.id,a.allow_uncertain)
     elif a.command=='purge-audio': print('Recordings purged:',store.purge_audio(a.older_than_days))

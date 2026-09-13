@@ -137,3 +137,7 @@ For a later local build, restore the selected keystore and set `HVB_DEBUG_KEYSTO
 [4] APK signature format used for the independent signature/content recheck: https://source.android.com/docs/security/features/apksigning/v2
 
 [5] Actual target build: https://github.com/EdgarAllenPoe/hermes-voice-build/actions/runs/34752997335
+
+## Version 0.3 source update
+
+This file describes the preserved original v0.2 delivery. The printable version 0.3 workshop guide is in source/docs/Hermes-Voice-Hardware-Guide.docx. Original v0.2 binaries and their checksums remain unchanged. New diagnostics and recovery features require a newly built v0.3 APK and firmware. Keep their matching personal key and recorder pairing pair; the disposable CI app is a separate package. See source/docs/10-prehardware.md.

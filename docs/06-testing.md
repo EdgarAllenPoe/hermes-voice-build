@@ -61,3 +61,7 @@ The 100 ms rail-settling delay and 500 ms double-click window are tuning paramet
 Use ideas with names, dates, Spanish phrases and long enough pauses to resemble actual use. Compare the retained WAV with the transcript. Confirm where Hermes stores an idea and how you will notice a clarification request, because version 1 does not show its response on the phone.
 
 Only enable `delivery_mode: auto` after choosing an acceptable level of risk for voice-recognition errors and the specific permissions of your Hermes agent. Do not use this prototype for emergency, safety-critical or time-critical commands.
+
+## Version 0.3 automated preparation
+
+The suite now drives the production Android transfer controller with a simulated recorder and real temporary spool files; it also drives the production C button state machine and expanded flash fault injection. CI additionally tests the Android database on an emulator and transcribes a public speech sample before/after HVB1 compression. Guide 10 explains the test scope and private speech evaluation. These checks do not substitute for the physical acceptance table above.

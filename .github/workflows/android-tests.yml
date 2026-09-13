@@ -1,0 +1,53 @@
+name: Android database tests
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh']
+  pull_request:
+    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      HVB_CI_BUILD: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Android emulator and Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$manager" 'platforms;android-36' 'build-tools;35.0.0' 'emulator' 'system-images;android-35;google_apis;x86_64' </dev/null
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name hermes-test --package 'system-images;android-35;google_apis;x86_64'
+          sudo chmod 666 /dev/kvm
+          bash tools/bootstrap-gradle.sh
+      - name: Run database migration and receipt tests on Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          "$ANDROID_HOME/emulator/emulator" -avd hermes-test -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/hermes-emulator.log 2>&1 &
+          trap 'adb emu kill || true' EXIT
+          timeout 240 adb wait-for-device
+          timeout 240 bash -c 'until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q 1; do sleep 2; done'
+          adb shell input keyevent 82
+          .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:connectedDebugAndroidTest
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: android-database-test-reports
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn

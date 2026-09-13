@@ -10,6 +10,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -137,6 +138,11 @@ def verify_apk_structure(path: Path) -> None:
 
 def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -> None:
     env = dict(os.environ, ANDROID_HOME=tools['sdk'])
+    if env.get('HVB_CI_BUILD') != '1':
+        key = Path(env.get('HVB_DEBUG_KEYSTORE') or str(ROOT/'config/private/android-debug.keystore')).expanduser()
+        if not key.is_file():
+            raise RuntimeError('Personal signing key is missing. Restore the selected backup with tools/restore_identity.py; do not generate a replacement for an installed app.')
+        env['HVB_DEBUG_KEYSTORE'] = str(key.resolve())
     # Java in JAVA_HOME must also be visible to Gradle's launcher.
     env['PATH'] = str(Path(tools['java']).parent) + os.pathsep + env.get('PATH', '')
     run([tools['java'], '-version'], logs / 'java-version.txt', env)
@@ -145,12 +151,12 @@ def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -
     if offline:
         command.append('--offline')
     # A personal test build, signed by Gradle with this machine's debug key.
-    command += [':app:clean', ':app:assembleDebug']
+    command += [':app:clean', ':app:assembleDebug', ':app:lintDebug']
     run(command, logs / 'android-build.txt', env)
     apk = ROOT / 'android/app/build/outputs/apk/debug/app-debug.apk'
     verify_apk_structure(apk)
     run([tools['apksigner'], 'verify', '--verbose', '--print-certs', str(apk)], logs / 'apk-signature.txt', env)
-    shutil.copy2(apk, out / 'Hermes-Voice-0.2.0-test.apk')
+    shutil.copy2(apk, out / ('Hermes-Voice-0.3.0-ci.apk' if env.get('HVB_CI_BUILD')=='1' else 'Hermes-Voice-0.3.0-test.apk'))
     # Retain the key at ~/.android/debug.keystore for compatible future updates.
 
 
@@ -163,6 +169,10 @@ def build_firmware(tools: dict[str, str], out: Path, logs: Path, offline: bool) 
         run([sys.executable, str(ROOT / 'tools/provision.py')], logs / 'provision.txt')
     elif not card.is_file():
         raise RuntimeError('A private firmware code exists but its pairing card is missing; restore the card rather than rotating an unknown existing code.')
+    definition = re.search(r'#define HVB_PAIRING_CODE ([0-9]{6})U',header.read_text(encoding='utf-8'))
+    printed = re.search(r'BLE passkey: ([0-9]{6})',card.read_text(encoding='utf-8'))
+    if not definition or not printed or definition.group(1)!=printed.group(1):
+        raise RuntimeError('Pairing header and card do not match; restore the matching pair before building.')
     run([tools['pio'], '--version'], logs / 'platformio-version.txt')
     run([tools['pio'], 'run', '-d', str(ROOT / 'firmware'), '-e', BOARD, '-t', 'clean'], logs / 'firmware-clean.txt')
     run([tools['pio'], 'run', '-d', str(ROOT / 'firmware'), '-e', BOARD], logs / 'firmware-build.txt')
@@ -223,7 +233,7 @@ def main() -> int:
     out.mkdir(parents=True)
     logs.mkdir(parents=True)
     result = {'created_utc': stamp, 'target': args.target, 'complete': False,
-              'hardware_tested': False, 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
+              'hardware_tested': False, 'version':'0.3.0', 'identity_profile':'ci-disposable' if os.environ.get('HVB_CI_BUILD')=='1' else 'personal', 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
     code = 1
     try:
         if args.target in ('all', 'android'):

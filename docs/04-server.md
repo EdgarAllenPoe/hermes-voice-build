@@ -154,3 +154,7 @@ python3 -m hvbridge --config ~/.config/hermes-voice/config.json export MESSAGE_U
 `purge-audio --older-than-days 7` clears only completed-message **database audio BLOBs**, preserving receipt IDs. It does not delete worker WAVs, prompts, transcripts, logs, SQLite journal remnants or Hermes's own history. Do not treat it as secure erasure. Stop services and follow guide 09 before deliberate filesystem cleanup or moving data to a new host.
 
 User services may stop after logout unless the account is configured to remain active. On a dedicated host, review whether `loginctl enable-linger YOUR_USER` is appropriate under your administration policy. It changes login-service behavior; do not run it blindly on a shared machine.
+
+## Version 0.3 review and maintenance
+
+Guide 10 documents show, edit, reject, storage and cleanup. Corrections preserve the first transcript, approval is explicit, and rejection never dispatches Hermes. Cleanup previews by default and applying it requires the worker to be stopped. The scheduler fairly selects the oldest eligible queued or ready transition. Existing review and uncertain items remain held.

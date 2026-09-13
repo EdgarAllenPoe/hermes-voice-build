@@ -1,0 +1,61 @@
+name: Speech codec evaluation
+on:
+  push:
+    branches: [main]
+    paths: ['receiver/hvbridge/audio.py', 'tools/evaluate_speech.py', '.github/workflows/speech-evaluation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-speech:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Build the fixed Whisper baseline and download its public sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v1.7.6 https://github.com/ggml-org/whisper.cpp.git .tools/whisper
+          cmake -S .tools/whisper -B .tools/whisper/build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DWHISPER_CURL=OFF
+          cmake --build .tools/whisper/build --config Release --parallel 2 --target whisper-cli
+          bash .tools/whisper/models/download-ggml-model.sh tiny.en
+      - name: Compare original and compressed public speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p speech-eval
+          cp .tools/whisper/samples/jfk.wav speech-eval/jfk.wav
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          Path('speech-eval/manifest.json').write_text(json.dumps([{
+              'name':'JFK public speech sample from whisper.cpp',
+              'wav':'jfk.wav','language':'en',
+              'reference':'And so my fellow Americans ask not what your country can do for you ask what you can do for your country'
+          }]))
+          PY
+          python tools/evaluate_speech.py speech-eval/manifest.json --out speech-eval/run --whisper .tools/whisper/build/bin/whisper-cli --model .tools/whisper/models/ggml-tiny.en.bin
+          git -C .tools/whisper rev-parse HEAD > speech-eval/run/WHISPER_COMMIT.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('speech-eval/run/report.json').read_text())
+          for c in r['cases']:
+              for variant,result in c['variants'].items():
+                  print(variant, 'word errors:', result['errors'], '/', result['reference_words'])
+                  assert result['text'].strip(), 'Expected actual speech transcription'
+          PY
+      - name: Save public benchmark results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-speech-evaluation
+          path: |
+            speech-eval/run/report.json
+            speech-eval/run/WHISPER_COMMIT.txt
+          if-no-files-found: error

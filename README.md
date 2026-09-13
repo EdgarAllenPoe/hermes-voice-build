@@ -1,8 +1,14 @@
 # Hermes Voice Button
 
+## Version 0.3 source
+
+Version 0.3 adds simulated recorder tests, a worker-thread Android relay, safe queue migration and per-message holds, firmware corruption quarantine and diagnostics, stable personal build identities, transcript review commands, fair worker scheduling, deliberate cleanup, and a speech comparison tool. Start with [the prehardware guide](docs/10-prehardware.md). The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx).
+
+Hardware is still on order. Software checks and successful builds do not establish microphone, Bluetooth, charging, or battery behavior. The separately delivered v0.2 binaries below are preserved and do not contain the new v0.3 behavior. Build v0.3 from source with the retained personal identity before using its new features.
+
 Android relay and recorder firmware for the **Seeed Studio XIAO nRF54LM20A Sense**. Not firmware for nRF54L15, nRF52840, or nRF54LM20B.
 
-## Both target builds succeeded
+## Original v0.2 delivery provenance
 
 The selected personal test build is [GitHub Actions run 34752997335](https://github.com/EdgarAllenPoe/hermes-voice-build/actions/runs/34752997335), from commit **`073af6bad44e0519368257abc515aa451c4a65f9`**, September 13, 2026. Both Android and firmware compiler/verification jobs completed successfully. Both build records contain `complete: true` and `hardware_tested: false`.
 
@@ -26,7 +32,7 @@ This repository is public. Generated BLE passkeys, firmware containing those cod
 
 CI encrypts private firmware/pairing material and Android signing-key backups to `config/build-recipient.crt.pem`. This is a **public certificate only**; its private key is not in the repository or on the runner. The selected run uses the recovery certificate committed in `073af6b`. Older encrypted runs require their own older matching recovery key; changing the current certificate does not decrypt or alter old artifacts.
 
-Each fresh CI build currently creates a new Android test-signing key and recorder passkey. Retain the selected APK with its matching private signing key, and each firmware image with its exact pairing card. For compatible future local Android updates, restore the selected keystore and set `HVB_DEBUG_KEYSTORE` to its absolute path. Do not mix CI builds or uninstall an app holding undelivered recordings merely to resolve a signature mismatch.
+CI builds now use a separate disposable Android package (org.tomstout.hermesvoice.ci) and recorder passkey. Personal builds use the retained local signing key and pairing configuration. See docs/10-prehardware.md for restoration. Retain the selected APK with its matching private signing key, and each firmware image with its exact pairing card. For compatible future local Android updates, restore the selected keystore and set `HVB_DEBUG_KEYSTORE` to its absolute path. Do not mix CI builds or uninstall an app holding undelivered recordings merely to resolve a signature mismatch.
 
 ## Source and verification scope
 
@@ -68,3 +74,5 @@ Use `python tools/build_binaries.py --check` to inspect installed target tools b
 A fresh checkout is provisioned automatically by the firmware build helper, or explicitly with `python tools/provision.py` before running PlatformIO directly. Keep the generated header with `config/private/pairing-card.txt`. Provisioning refuses to overwrite an existing configuration without `--force`; that option intentionally rotates the recorder code.
 
 The ignore rules also cover copied firmware/APK outputs, private key files, environment files, receiver databases, and real recordings. The public build-recipient certificate and the two named synthetic audio fixtures are explicitly allowed. Git ignore rules do not undo previous publication and can be bypassed with force-add, so review staged files before pushing.
+
+After reviewing and staging source changes, run python tools/update_snapshot.py, then stage SHA256SUMS.txt. This refreshes the public snapshot without including ignored private files.

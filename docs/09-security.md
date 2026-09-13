@@ -43,3 +43,9 @@ The 100 MiB queue limit applies to BLOB contents, not the whole directory or Her
 No proven battery runtime; no measured cell temperature; no compiled target binaries in this bundle; no tested Android wake latency; 15 recorder slots; maximum 60-second messages; simple energy-based silence detection; single phone bond; no device screen or vibration; no phone display of Hermes replies; no dynamic memory of a particular interactive Hermes session; and no guarantee of complete recovery of a recording interrupted before commit.
 
 All of these are visible design/validation boundaries, not features silently assumed to exist.
+
+## Version 0.3 preservation and diagnostics
+
+Permanent HTTP rejections hold the affected phone recording rather than blocking all later uploads. Corrupt recorder slots and rejected phone bytes remain private and consume storage. SKIP never deletes recorder data. Diagnostics export excludes secrets, addresses and voice content. Explicit completed-work cleanup retains duplicate receipts; it is not secure erasure. Guide 10 describes preview and apply steps.
+
+CI Android builds use a separate package and disposable signing key. Personal builds require the retained private signing key and matching recorder provisioning. Never publish those local files.

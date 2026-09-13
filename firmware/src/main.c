@@ -1,6 +1,7 @@
 /* First prototype favors fast System-ON idle wake, not unmeasured System-OFF claims. */
 #include "hvb.h"
 #include "codec.h"
+#include "button.h"
 #include <zephyr/device.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/drivers/gpio.h>
@@ -24,16 +25,17 @@ K_MSGQ_DEFINE(edges,sizeof(struct edge),16,4);
 K_MEM_SLAB_DEFINE_STATIC(audio_slab,640,16,4);
 static struct pcm_stream_cfg stream={.pcm_rate=16000,.pcm_width=16,.block_size=640,.mem_slab=&audio_slab};
 static struct dmic_cfg config={.io={.min_pdm_clk_freq=1000000,.max_pdm_clk_freq=3500000,.min_pdm_clk_dc=40,.max_pdm_clk_dc=60},.streams=&stream,.channel={.req_num_streams=1,.req_num_chan=1}};
-static uint16_t battery;
+static atomic_t battery;
+static atomic_t mic_failures,audio_failures,dropped_edges;
 static int16_t pre[12][320];
 static unsigned pre_count,pre_index;
 static bool mic_on;
 void hvb_led(unsigned r,unsigned g,unsigned b){unsigned v[]={r,g,b};for(unsigned i=0;i<3;i++)gpio_pin_set_dt(&leds[i],v[i]?1:0);}
-uint16_t hvb_battery_mv(void){return battery;}
+uint16_t hvb_battery_mv(void){return (uint16_t)atomic_get(&battery);}
 static void edge_cb(const struct device *port,struct gpio_callback *cb,uint32_t pins){
     ARG_UNUSED(pins);const struct gpio_dt_spec *s=cb==&ext_cb?&button:&onboard;
     struct edge e={.at=k_uptime_get(),.down=gpio_pin_get_dt(s)>0};ARG_UNUSED(port);
-    (void)k_msgq_put(&edges,&e,K_NO_WAIT);
+    if(k_msgq_put(&edges,&e,K_NO_WAIT))atomic_inc(&dropped_edges);
 }
 static int setup_button(const struct gpio_dt_spec *s,struct gpio_callback *cb){
     if(!gpio_is_ready_dt(s))return -ENODEV;
@@ -65,7 +67,7 @@ static void background(void *a,void *b,void *c){
         if(++ticks%100==0&&!atomic_get(&hvb_recording)&&device_is_ready(charger)){
             struct sensor_value v;
             if(!sensor_sample_fetch(charger)&&!sensor_channel_get(charger,SENSOR_CHAN_GAUGE_VOLTAGE,&v))
-                battery=(uint16_t)(v.val1*1000+v.val2/1000);
+                atomic_set(&battery,(uint16_t)(v.val1*1000+v.val2/1000));
         }
         k_msleep(100);
     }
@@ -83,20 +85,19 @@ int main(void){
     }
     k_thread_create(&bg_thread,bg_stack,K_THREAD_STACK_SIZEOF(bg_stack),background,NULL,NULL,NULL,7,0,K_NO_WAIT);
     hvb_led(0,0,0);
-    bool tentative=false,released=false,held=false,pair_shown=false,forget_shown=false;
-    int64_t first=0,held_since=0,last_down=-1000;int slot=-1;struct hvb_gate gate={0};
+    struct hvb_button buttons;hvb_button_init(&buttons);
+    int slot=-1;struct hvb_gate gate={0};
     while(true){
         struct edge e;
-        while(k_msgq_get(&edges,&e,mic_on||held?K_NO_WAIT:K_MSEC(100))==0){
-            if(!e.down){held=false;released=true;continue;}
-            if(e.at-last_down<60)continue;
-            last_down=e.at;held=true;held_since=e.at;pair_shown=forget_shown=false;
-            if(slot>=0){
-                int rc=hvb_store_finish(slot,2);slot=-1;stop_mic();tentative=false;hvb_led(rc?1:0,0,0);continue;
+        while(k_msgq_get(&edges,&e,mic_on||buttons.held?K_NO_WAIT:K_MSEC(100))==0){
+            enum hvb_button_action action=hvb_button_edge(&buttons,e.at,e.down,slot>=0);
+            if(action==HVB_BUTTON_NONE)continue;
+            if(action==HVB_BUTTON_STOP){
+                int rc=hvb_store_finish(slot,2);slot=-1;stop_mic();hvb_led(rc?1:0,0,0);continue;
             }
-            if(tentative&&released&&e.at-first<=500){
+            if(action==HVB_BUTTON_START){
                 uint8_t header[64];slot=hvb_store_begin(header);
-                if(slot<0){stop_mic();tentative=false;hvb_led(1,0,0);continue;}
+                if(slot<0){stop_mic();buttons.tentative=false;hvb_led(1,0,0);continue;}
                 memset(&gate,0,sizeof(gate));int rc=0;
                 for(unsigned i=0;i<pre_count;i++){
                     unsigned j=(pre_index+12-pre_count+i)%12;
@@ -104,21 +105,22 @@ int main(void){
                     (void)hvb_gate_update(&gate,pre[j],HVB_VAD_THRESHOLD);
                 }
                 if(rc){hvb_store_abort(slot);slot=-1;stop_mic();hvb_led(1,0,0);}else hvb_led(0,1,0);
-                tentative=false;continue;
+                buttons.tentative=false;continue;
             }
-            if(tentative) { stop_mic(); tentative=false; }
-            first=e.at;released=false;tentative=true;atomic_set(&hvb_recording,1);
-            if(start_mic()){tentative=false;atomic_clear(&hvb_recording);hvb_led(1,0,0);}
+            if(action==HVB_BUTTON_WAKE){
+                stop_mic();atomic_set(&hvb_recording,1);
+                if(start_mic()){atomic_inc(&mic_failures);buttons.tentative=false;atomic_clear(&hvb_recording);hvb_led(1,0,0);}
+            }
         }
-        int64_t now=k_uptime_get();
-        if(held&&now-held_since>1500&&!pair_shown&&slot<0){stop_mic();tentative=false;hvb_ble_pair_window();pair_shown=true;hvb_led(0,0,1);}
-        if(held&&now-held_since>10000&&!forget_shown&&slot<0){hvb_ble_forget_phone();forget_shown=true;hvb_led(1,0,1);}
-        if(tentative&&now-first>500){stop_mic();tentative=false;hvb_led(0,0,0);}
-        if(!mic_on){if(!held&&pair_shown)hvb_led(0,0,0);if(held)k_msleep(10);continue;}
+        enum hvb_button_action timed=hvb_button_poll(&buttons,k_uptime_get(),slot>=0);
+        if(timed==HVB_BUTTON_PAIR){stop_mic();hvb_ble_pair_window();hvb_led(0,0,1);}
+        if(timed==HVB_BUTTON_FORGET){stop_mic();hvb_ble_forget_phone();hvb_led(1,0,1);}
+        if(timed==HVB_BUTTON_CANCEL){stop_mic();hvb_led(0,0,0);}
+        if(!mic_on){if(!buttons.held&&buttons.pair_shown)hvb_led(0,0,0);if(buttons.held)k_msleep(10);continue;}
         void *buf=NULL;size_t size=0;int rc=dmic_read(mic,0,&buf,&size,100);
-        if(rc||size!=640){if(buf)k_mem_slab_free(&audio_slab,buf);hvb_store_abort(slot);slot=-1;stop_mic();tentative=false;hvb_led(1,0,0);continue;}
+        if(rc||size!=640){atomic_inc(&audio_failures);if(buf)k_mem_slab_free(&audio_slab,buf);hvb_store_abort(slot);slot=-1;stop_mic();buttons.tentative=false;hvb_led(1,0,0);continue;}
         const int16_t *pcm=buf;
-        if(tentative){memcpy(pre[pre_index],pcm,640);pre_index=(pre_index+1)%12;if(pre_count<12)pre_count++;}
+        if(buttons.tentative){memcpy(pre[pre_index],pcm,640);pre_index=(pre_index+1)%12;if(pre_count<12)pre_count++;}
         else if(slot>=0){
             rc=add_frame(slot,pcm);int end=hvb_gate_update(&gate,pcm,HVB_VAD_THRESHOLD);
             if(rc||end){
@@ -130,4 +132,10 @@ int main(void){
         k_mem_slab_free(&audio_slab,buf);
     }
     return 0;
+}
+
+void hvb_capture_diagnostics(uint8_t out[12]){
+    sys_put_le32((uint32_t)atomic_get(&mic_failures),out);
+    sys_put_le32((uint32_t)atomic_get(&audio_failures),out+4);
+    sys_put_le32((uint32_t)atomic_get(&dropped_edges),out+8);
 }

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "normal idea",
+    "wav": "normal.wav",
+    "reference": "Remember to bring the notebook to the meeting tomorrow.",
+    "language": "en"
+  },
+  {
+    "name": "names and date",
+    "wav": "names.wav",
+    "reference": "Ask Maria and Thomas about the September twenty third meeting.",
+    "language": "en"
+  },
+  {
+    "name": "quiet with pauses",
+    "wav": "quiet.wav",
+    "reference": "I have an idea for the garden. We could move the bench near the tree.",
+    "language": "en"
+  },
+  {
+    "name": "background noise without speech",
+    "wav": "noise.wav",
+    "reference": "",
+    "language": "en"
+  }
+]

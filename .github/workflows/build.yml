@@ -28,6 +28,7 @@ jobs:
       matrix:
         target: [android, firmware]
     env:
+      HVB_CI_BUILD: '1'
       TARGET: ${{ matrix.target }}
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       HVB_DEBUG_KEYSTORE: ${{ github.workspace }}/config/private/android-debug.keystore
@@ -59,7 +60,7 @@ jobs:
           "$manager" 'platforms;android-36' 'build-tools;35.0.0' </dev/null
           bash tools/bootstrap-gradle.sh
           echo "GRADLE_BIN=$GITHUB_WORKSPACE/.tools/gradle-8.11.1/bin/gradle" >> "$GITHUB_ENV"
-      - name: Create the private test-signing key at a known path
+      - name: Create a disposable key for the isolated CI app
         if: matrix.target == 'android'
         shell: bash
         run: |

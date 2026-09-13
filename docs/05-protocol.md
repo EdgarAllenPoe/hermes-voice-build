@@ -101,3 +101,26 @@ The response status is `202`. Android verifies `id`, `sha256` and `accepted` bef
 Server flow is `queued → transcribing → review/ready → delivering → done`. Transcription failures become `failed`; interrupted or failed agent handoffs become `uncertain`. On worker restart, interrupted transcription is requeued, but interrupted dispatch is not automatically replayed.
 
 A UUID deduplicates file delivery. It cannot prove an external agent's action occurred exactly once. There is no transaction spanning SQLite and all of Hermes's possible tools. Operator review of uncertain dispatch is therefore part of the contract.
+
+## Compatible diagnostics extension in firmware 0.3
+
+The first eight INFO bytes retain their HVB1 meanings. Firmware 0.3 returns 32 bytes.
+Clients must accept the legacy eight-byte response and must not infer optional capabilities from a version string alone.
+
+| Offset | Size | Meaning |
+|---|---|---|
+| 8 | 1 | Diagnostic schema 1 |
+| 9 | 3 | Firmware major, minor and patch |
+| 12 | 4 | Microphone startup failures |
+| 16 | 4 | Audio read/size failures |
+| 20 | 4 | Dropped button edge events |
+| 24 | 4 | Flash read/write/erase errors |
+| 28 | 2 | Quarantined or broken slots |
+| 30 | 2 | Capabilities; bit 0 supports SKIP |
+
+Counters are unsigned little-endian and reset at boot. Battery voltage remains a diagnostic reading, not a calibrated percentage. Android's display is a snapshot captured at connection.
+
+**SKIP:** only with capability bit 0, write byte 04 followed by the selected UUID.
+This excludes that slot from later NEXT selections on the same connection. No flash marker is written and no audio is deleted. The exclusion resets on disconnect. Android attempts three complete invalid downloads before using SKIP and preserves the rejected bytes in its private incoming directory with suffix .bad.
+
+At boot, firmware validates committed header fields, frame structure and payload CRC. Corrupt committed slots become quarantined and are not returned by NEXT. Bytes remain intact, capacity is reduced, and diagnostics report the quarantined count. There is no automatic destructive recovery command. A corrupt message must never be acknowledged merely to clear the queue.

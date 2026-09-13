@@ -11,6 +11,21 @@ final class Settings {
     static final String DEFAULT_ENDPOINT="http://100.99.200.55:8765/v1/voice";
     static String endpoint(Context c){return prefs(c).getString("endpoint",DEFAULT_ENDPOINT);}
     static SharedPreferences prefs(Context c){return c.getSharedPreferences("settings",Context.MODE_PRIVATE);}
+    static void metric(Context c,String key,String value){
+        c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit().putString(key,value).apply();
+    }
+    static String diagnostics(Context c){
+        SharedPreferences d=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE);
+        StringBuilder out=new StringBuilder("Hermes Voice "+BuildConfig.VERSION_NAME+"\n");
+        for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload"}){
+            String value=d.getString(key,"not available");
+            if(key.equals("last_upload")&&!value.equals("not available")){
+                try{value=new java.util.Date(Long.parseLong(value)).toString();}catch(NumberFormatException ignored){}
+            }
+            out.append(key.replace('_',' ')).append(": ").append(value).append("\n");
+        }
+        return out.toString();
+    }
     static boolean enabled(Context c){return prefs(c).getBoolean("enabled",false);}
     static void status(Context c,String s){prefs(c).edit().putString("status",s).apply();}
     static SecretKey key() throws Exception {

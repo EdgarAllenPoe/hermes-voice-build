@@ -1,6 +1,6 @@
 """Durable SQLite queue. Upload acknowledgement means COMMIT, not agent completion."""
 from __future__ import annotations
-import hashlib, sqlite3, time
+import hashlib, sqlite3, time, shutil
 from contextlib import contextmanager
 from pathlib import Path
 from .audio import validate
@@ -17,6 +17,10 @@ class Store:
               transcript TEXT, result TEXT, error TEXT, flags INTEGER NOT NULL,
               attempts INTEGER NOT NULL DEFAULT 0);
               CREATE INDEX IF NOT EXISTS queue_state ON messages(state,created);""")
+            columns = {row[1] for row in db.execute('PRAGMA table_info(messages)')}
+            if 'original_transcript' not in columns:
+                db.execute('ALTER TABLE messages ADD COLUMN original_transcript TEXT')
+            db.execute('PRAGMA user_version=2')
         self.path.chmod(0o600)
     @contextmanager
     def connect(self):
@@ -41,6 +45,20 @@ class Store:
             db.execute('INSERT INTO messages(id,sha256,audio,state,created,updated,flags) VALUES(?,?,?,?,?,?,?)',
                        (h.message_id,digest,data,'queued',now,now,h.flags))
         return h.message_id,digest,False
+    def claim_work(self):
+        # Oldest eligible transition wins, so neither transcription nor approved
+        # delivery can starve under a continuous stream of the other.
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute("SELECT * FROM messages WHERE state IN ('queued','ready') "
+                             "ORDER BY updated,created,id LIMIT 1").fetchone()
+            if not row:
+                return None
+            next_state = 'transcribing' if row['state'] == 'queued' else 'delivering'
+            db.execute('UPDATE messages SET state=?,updated=?,attempts=attempts+1 WHERE id=?',
+                       (next_state,time.time(),row['id']))
+            return dict(row)
+
     def claim(self,state:str,next_state:str):
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -67,6 +85,53 @@ class Store:
         with self.connect() as db:
             r=db.execute('SELECT * FROM messages WHERE id=?',(mid,)).fetchone()
             return dict(r) if r else None
+    def review(self,mid:str):
+        row = self.get(mid)
+        if not row:
+            raise ValueError('Unknown message')
+        return {k: row[k] for k in ('id','state','transcript','original_transcript','error','result')}
+
+    def edit_transcript(self,mid:str,text:str):
+        text = text.strip()
+        if not text or len(text.encode('utf-8')) > 64000:
+            raise ValueError('Transcript must contain 1 to 64000 UTF-8 bytes')
+        with self.connect() as db:
+            cur = db.execute("UPDATE messages SET original_transcript=COALESCE(original_transcript,transcript),"
+                             "transcript=?,updated=? WHERE id=? AND state='review'",
+                             (text,time.time(),mid))
+            if not cur.rowcount:
+                raise ValueError('Only a message awaiting review can be edited')
+
+    def reject(self,mid:str):
+        with self.connect() as db:
+            cur = db.execute("UPDATE messages SET state='rejected',updated=?,error='Rejected by operator' "
+                             "WHERE id=? AND state='review'",(time.time(),mid))
+            if not cur.rowcount:
+                raise ValueError('Only a message awaiting review can be rejected')
+
+    def report(self):
+        with self.connect() as db:
+            states = {r[0]:r[1] for r in db.execute('SELECT state,COUNT(*) FROM messages GROUP BY state')}
+            audio = db.execute('SELECT COALESCE(SUM(length(audio)),0) FROM messages').fetchone()[0]
+        total = sum(p.stat().st_size for p in self.path.parent.rglob('*')
+                    if p.is_file() and not p.is_symlink())
+        return dict(states=states,audio_bytes=audio,quota_bytes=self.quota,
+                    state_directory_bytes=total,free_disk_bytes=shutil.disk_usage(self.path.parent).free)
+
+    def cleanup_candidates(self,days:int):
+        if days < 1:
+            raise ValueError('Retention must be at least one day')
+        with self.connect() as db:
+            return [dict(r) for r in db.execute(
+                "SELECT id,state,length(audio) AS audio_bytes FROM messages "
+                "WHERE state IN ('done','rejected') AND updated<? ORDER BY created",
+                (time.time()-days*86400,))]
+
+    def clear_completed(self,mid:str):
+        with self.connect() as db:
+            db.execute("UPDATE messages SET audio=NULL,transcript=NULL,original_transcript=NULL,result=NULL "
+                       "WHERE id=? AND state IN ('done','rejected')",(mid,))
+
     def approve(self,mid:str):
         with self.connect() as db:
             cur=db.execute("UPDATE messages SET state='ready',updated=? WHERE id=? AND state='review'",(time.time(),mid))

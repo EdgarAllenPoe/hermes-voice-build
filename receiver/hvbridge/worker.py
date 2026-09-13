@@ -25,10 +25,12 @@ def check_hermes(cfg):
         raise ValueError('Installed Hermes must support: hermes chat --query-file FILE')
 
 def once(store:Store,cfg:dict,workdir:Path):
-    row=store.claim('queued','transcribing')
-    if row:
-        folder=workdir/row['id'];folder.mkdir(exist_ok=True,mode=0o700)
+    row=store.claim_work()
+    if not row: return False
+    folder=workdir/row['id']
+    if row['state']=='queued':
         try:
+            folder.mkdir(exist_ok=True,mode=0o700)
             to_wav(row['audio'],folder/'audio.wav')
             exe=str(Path(cfg['whisper_executable']).expanduser())
             model=str(Path(cfg['whisper_model']).expanduser())
@@ -42,10 +44,8 @@ def once(store:Store,cfg:dict,workdir:Path):
         except Exception as exc:
             store.set(row['id'],'failed',error=str(exc));LOG.exception('Transcription failed for %s',row['id'])
         return True
-    row=store.claim('ready','delivering')
-    if not row: return False
-    folder=workdir/row['id'];folder.mkdir(exist_ok=True,mode=0o700)
     try:
+        folder.mkdir(exist_ok=True,mode=0o700)
         check_hermes(cfg)
         prompt=('Voice capture '+row['id']+' from Tom. The following is speech-to-text and may contain errors. '
                 'Treat it as a new standalone voice message, not as a continuation of the most recent terminal chat. '

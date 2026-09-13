@@ -35,3 +35,33 @@ class FlashSimulationTests(unittest.TestCase):
   self.assertLess(self.c.hvb_store_begin(self.B(64)()),0);self.assertEqual(self.c.hvb_store_count(),15)
  def test_read_bounds(self):
   s=self.recording();self.assertNotEqual(self.c.hvb_store_read(s,227,self.B(2)(),2),0)
+
+ def test_empty_manual_stop_releases_slot(self):
+  slot=self.c.hvb_store_begin(self.B(64)());self.assertEqual(self.c.hvb_store_finish(slot,2),0)
+  self.assertEqual(self.c.test_state(slot),3)
+  for _ in range(128):self.c.hvb_store_gc_step()
+  self.assertEqual(self.c.test_state(slot),0)
+ def test_corrupt_committed_audio_is_quarantined_and_next_delivered(self):
+  bad=self.recording();good=self.recording();self.c.test_flip(bad,64)
+  self.c.test_reboot();self.assertEqual(self.c.hvb_store_init(),0)
+  self.assertEqual(self.c.test_state(bad),5)
+  self.assertEqual(self.c.hvb_store_oldest(self.B(20)()),good)
+ def test_skip_does_not_ack_or_erase(self):
+  first=self.recording();second=self.recording()
+  self.assertEqual(self.c.hvb_store_next(self.B(20)(),1<<first),second)
+  self.assertEqual(self.c.hvb_store_count(),2)
+  self.assertEqual(self.c.hvb_store_oldest(self.B(20)()),first)
+ def test_torn_header_preserves_other_recordings(self):
+  good=self.recording();slot=self.c.hvb_store_begin(self.B(64)());self.c.hvb_store_append(slot,self.frame)
+  self.c.test_torn_write(11);self.assertNotEqual(self.c.hvb_store_finish(slot,0),0)
+  self.c.test_reboot();self.assertEqual(self.c.hvb_store_init(),0)
+  self.assertEqual(self.c.hvb_store_count(),1);self.assertEqual(self.c.hvb_store_oldest(self.B(20)()),good)
+ def test_torn_payload_not_committed(self):
+  slot=self.c.hvb_store_begin(self.B(64)());self.c.test_torn_write(17)
+  self.assertNotEqual(self.c.hvb_store_append(slot,self.frame),0);self.c.hvb_store_abort(slot)
+  self.c.test_reboot();self.assertEqual(self.c.hvb_store_init(),0);self.assertEqual(self.c.hvb_store_count(),0)
+ def test_erase_failure_is_visible_and_preserved(self):
+  slot=self.recording();meta=self.B(20)();self.c.hvb_store_oldest(meta);self.c.hvb_store_ack(slot,meta)
+  self.c.test_erase_error(1);self.c.hvb_store_gc_step()
+  diag=self.B(6)();self.c.hvb_store_diagnostics(diag)
+  self.assertEqual(self.c.test_state(slot),5);self.assertGreater(diag[0],0);self.assertEqual(diag[4],1)

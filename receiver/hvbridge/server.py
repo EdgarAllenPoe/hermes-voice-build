@@ -26,7 +26,7 @@ def server(store:Store,host:str,port:int,token:str):
         def do_GET(self):
             if not self.authed(): return self.reply(401,{'error':'unauthorized'})
             if self.path!='/health': return self.reply(404,{'error':'not found'})
-            return self.reply(200,{'status':'ok','protocol':'HVB1'})
+            return self.reply(200,{'status':'ok','protocol':'HVB1','queue':store.report()['states']})
         def do_POST(self):
             if not self.authed(): return self.reply(401,{'error':'unauthorized'})
             if self.path!='/v1/voice': return self.reply(404,{'error':'not found'})
