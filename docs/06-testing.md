@@ -10,7 +10,7 @@ bash tools/run_tests.sh
 
 The recorded authoring run passed 56 tests. It includes host C/Python codec comparison, Java/Python container agreement, checksum/format rejection, SQLite concurrency/duplicates, private HTTP responses, review-mode behavior, safe subprocess argument passing, timeouts and simulated NOR storage recovery. It does **not** test real BLE, the ADC/charger, the microphone, Android runtime, or compile the target firmware/APK. The test-only `host_shim` headers must never be used for a firmware target build.
 
-Run the pristine tests before provisioning; the no-default-passkey test intentionally detects the public bundle's unconfigured header. Do not replace a real private passkey with a test constant merely to make that test pass afterward.
+The no-default-passkey test checks the tracked example header. Provisioning tests create temporary test repositories and never rotate the real recorder code. The full suite can therefore run before or after local provisioning. GitHub Actions runs it on Linux; the Linux worker and native C harnesses are not a native Windows test suite.
 
 ## Required bench sign-off
 

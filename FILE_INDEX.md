@@ -83,7 +83,7 @@ Start with [README.md](README.md). Historical reports are labelled and retained 
 - `firmware/src/ble.c`
 - `firmware/src/codec.c`
 - `firmware/src/codec.h`
-- `firmware/src/device_config.h`
+- `firmware/src/device_config.example.h`
 - `firmware/src/hvb.h`
 - `firmware/src/main.c`
 - `firmware/src/storage.c`
@@ -137,6 +137,7 @@ Start with [README.md](README.md). Historical reports are labelled and retained 
 - `tests/test_manifest.py`
 - `tests/test_native_codec.py`
 - `tests/test_pio_adapter_patch.py`
+- `tests/test_provision.py`
 - `tests/test_storage_http.py`
 - `tests/test_worker.py`
 

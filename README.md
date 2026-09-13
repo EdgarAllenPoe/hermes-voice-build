@@ -60,3 +60,11 @@ GitHub Actions runs this same suite on pushes and pull requests. The worker uses
 Use `python tools/build_binaries.py --check` to inspect installed target tools before building. The repository includes no compiler toolchains, Whisper model, or server bearer token. `receiver/config.tomstout.json` is a preset with placeholder executable paths and a token-file path; generate the actual token on the receiver host as documented.
 
 `SHA256SUMS.txt` records the public source snapshot. Run `python tools/verify_package.py` before modifying it. These source checksums and the private delivery kit's original checksums describe their respective snapshots; later source edits invalidate the old delivery snapshot's source entries without changing its compiled binaries.
+
+## Pairing configuration and Git
+
+`firmware/src/device_config.example.h` is the public template. The real `firmware/src/device_config.h` is generated locally by `python tools/provision.py`, is ignored, and is no longer tracked. The existing local header was preserved during this source synchronization; no real passkey or signing key was rotated. If another checkout already has a provisioned header, back up that header and its matching card before pulling the change that removes the tracked header, then restore the header as an ignored local file if necessary.
+
+A fresh checkout is provisioned automatically by the firmware build helper, or explicitly with `python tools/provision.py` before running PlatformIO directly. Keep the generated header with `config/private/pairing-card.txt`. Provisioning refuses to overwrite an existing configuration without `--force`; that option intentionally rotates the recorder code.
+
+The ignore rules also cover copied firmware/APK outputs, private key files, environment files, receiver databases, and real recordings. The public build-recipient certificate and the two named synthetic audio fixtures are explicitly allowed. Git ignore rules do not undo previous publication and can be bypassed with force-add, so review staged files before pushing.

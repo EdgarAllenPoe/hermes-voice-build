@@ -159,7 +159,7 @@ def build_firmware(tools: dict[str, str], out: Path, logs: Path, offline: bool) 
         raise RuntimeError('Firmware offline mode is not certified. Build once online, freeze/cache the toolchain, and verify offline rebuilding before relying on it.')
     header = ROOT / 'firmware/src/device_config.h'
     card = ROOT / 'config/private/pairing-card.txt'
-    if '#error' in header.read_text():
+    if not header.is_file() or '#error' in header.read_text(encoding='utf-8'):
         run([sys.executable, str(ROOT / 'tools/provision.py')], logs / 'provision.txt')
     elif not card.is_file():
         raise RuntimeError('A private firmware code exists but its pairing card is missing; restore the card rather than rotating an unknown existing code.')

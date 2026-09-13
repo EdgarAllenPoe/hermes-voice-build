@@ -2,24 +2,24 @@
 
 ## Target and toolchain
 
-This source targets **XIAO nRF54LM20A Sense using Seeed's PlatformIO Zephyr board package**. It is not an Arduino sketch and not firmware for the nRF52840 or nRF54L15. Platform/board sources and the current manufacturer examples are listed in [S1, S3, S9, S17]. The target build was not executed in the authoring environment.
+This source targets **XIAO nRF54LM20A Sense using Seeed's PlatformIO Zephyr board package**. It is not an Arduino sketch and not firmware for the nRF52840 or nRF54L15. Platform/board sources and the current manufacturer examples are listed in [S1, S3, S9, S17]. Both targets subsequently compiled in the selected run `34752997335`; see `../VERIFIED_BUILD.md`. Physical board acceptance is still outstanding.
 
 Install Python 3, Git, PlatformIO Core and the required USB permissions/drivers while online. Keep the manufacturer package downloaded for offline use. On a Linux build workstation:
 
 ```sh
 python3 -m venv ~/.venvs/hermes-build
 . ~/.venvs/hermes-build/bin/activate
-python -m pip install --upgrade pip platformio
-cd /path/to/Hermes-Voice-Button-v0.1
+python -m pip install "platformio==6.1.18"
+cd /path/to/hermes-voice-build
 python3 tools/provision.py
 pio run -d firmware
 ```
 
-`platformio.ini` selects environment `seeed-xiao-nrf54lm20a` and framework `zephyr`. The platform Git URL intentionally follows the vendor distribution because a validated commit is not yet known here. **After a successful build**, record and pin the installed platform commit, package versions and firmware hashes. Do not describe a moving Git branch as a locked dependency. Guide 07 covers offline caching.
+`platformio.ini` selects environment `seeed-xiao-nrf54lm20a` and framework `zephyr`. The vendor platform is pinned to commit `1ec1287f8e4bc4067a6fd593991e36875aef989f`, used by the selected compiled build. Keep the resolved package versions and generated hardware configuration with each later build; the pin does not lock every transitive dependency. Guide 07 covers offline caching.
 
-There is no shared shipping BLE passkey. `device_config.h` initially contains `#error`; provisioning replaces it with a locally random code. Print `config/private/pairing-card.txt` privately and retain it. Re-running provision requires `--force`, rotates the code and requires re-pairing. Do not commit the generated header or pairing card to a public repository.
+There is no shared shipping BLE passkey. The tracked `firmware/src/device_config.example.h` contains only a build-error guard. Provisioning creates `firmware/src/device_config.h` with a locally random code; that generated file is ignored and is not tracked. A fresh checkout does not contain it. The build helper automatically provisions a fresh checkout when needed. Print `config/private/pairing-card.txt` privately and retain it. Re-running provision requires `--force`, rotates the code and requires re-pairing. Do not commit the generated header or pairing card to a public repository.
 
-The pristine-package test that expects `#error` is supposed to stop passing once you have provisioned your real device. Run that test before provisioning, or exclude `test_no_default_pairing_secret` when testing a locally configured build. Do not revert your code to a shared test secret.
+The no-default-passkey test inspects the public example, so the suite can run after local provisioning without reading or replacing a real passkey. Keep a matched header and pairing card together. If only one survives, restore its matching counterpart before building; do not rotate it accidentally.
 
 ## Mandatory board-support checks
 
@@ -29,7 +29,7 @@ The supplied firmware expects these device-tree labels/aliases:
 |---|---|
 | `pdm20` | PDM microphone controller |
 | `dmic_vdd` | Switchable microphone rail, intended 3.3 V |
-| `power_en` | Board power-enable regulator |
+| `vsys_3v3` | Actual system rail (BUCK2), replacing the obsolete `power_en` assumption |
 | `py25q64` | 8 MB external SPI NOR flash |
 | `pmic` and its charger child | nPM1300 |
 | `sw0` | Onboard user button |
