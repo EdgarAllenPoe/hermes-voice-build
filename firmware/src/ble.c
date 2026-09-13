@@ -17,6 +17,17 @@ static struct bt_uuid_128 info_uuid=BT_UUID_INIT_128(UUID(5));
 static int selected=-1;static uint8_t meta[20],chunk[180];static size_t chunk_len;
 static struct bt_conn *peer;static bool advertising;static int64_t pair_until;
 K_MUTEX_DEFINE(peer_lock);
+/* BT_DATA_BYTES uses compound literals. File scope gives the payload arrays
+ * static storage duration, as required by these static advertisement records. */
+static const struct bt_data ad[]={BT_DATA_BYTES(BT_DATA_FLAGS,(BT_LE_AD_GENERAL|BT_LE_AD_NO_BREDR)),BT_DATA_BYTES(BT_DATA_UUID128_ALL,UUID(1))};
+static const struct bt_data sd[]={BT_DATA(BT_DATA_NAME_COMPLETE,"Hermes Voice",12)};
+/* Zephyr 4.4 removed BT_LE_ADV_CONN. Keep a single connectable advertiser
+ * and explicitly retain the stable identity used by Android association.
+ * Nearby scanners can recognize this identity; that privacy tradeoff is documented. */
+static const struct bt_le_adv_param advertising_parameters = BT_LE_ADV_PARAM_INIT(
+    BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY,
+    BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL);
+
 static ssize_t read_meta(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){return bt_gatt_attr_read(c,a,b,n,o,meta,sizeof(meta));}
 static ssize_t read_data(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){return bt_gatt_attr_read(c,a,b,n,o,chunk,chunk_len);}
 static ssize_t read_info(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){
@@ -77,10 +88,8 @@ void hvb_ble_forget_phone(void){
 }
 void hvb_ble_maintenance(void){
     bool want=hvb_store_count()>0||k_uptime_get()<pair_until;
-    static const struct bt_data ad[]={BT_DATA_BYTES(BT_DATA_FLAGS,(BT_LE_AD_GENERAL|BT_LE_AD_NO_BREDR)),BT_DATA_BYTES(BT_DATA_UUID128_ALL,UUID(1))};
-    static const struct bt_data sd[]={BT_DATA(BT_DATA_NAME_COMPLETE,"Hermes Voice",12)};
     k_mutex_lock(&peer_lock,K_FOREVER);
-    if(want&&!peer&&!advertising){int rc=bt_le_adv_start(BT_LE_ADV_CONN,ad,ARRAY_SIZE(ad),sd,ARRAY_SIZE(sd));if(!rc||rc==-EALREADY)advertising=true;}
+    if(want&&!peer&&!advertising){int rc=bt_le_adv_start(&advertising_parameters,ad,ARRAY_SIZE(ad),sd,ARRAY_SIZE(sd));if(!rc||rc==-EALREADY)advertising=true;}
     if(!want){
         if(advertising){bt_le_adv_stop();advertising=false;}
         if(peer)bt_conn_disconnect(peer,BT_HCI_ERR_REMOTE_USER_TERM_CONN);
