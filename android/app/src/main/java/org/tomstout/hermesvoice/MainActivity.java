@@ -21,9 +21,9 @@ public final class MainActivity extends Activity {
         TextView explanation=new TextView(this);explanation.setText("The small recorder uses its own microphone. Keep Bluetooth and Tailscale enabled. First unlock after reboot is required. Your digital assistant is unchanged.");box.addView(explanation);
         url=new EditText(this);url.setHint(Settings.DEFAULT_ENDPOINT);url.setSingleLine();url.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);url.setText(Settings.endpoint(this));box.addView(url);
         token=new EditText(this);token.setHint("Server token (leave blank to keep stored token)");token.setSingleLine();token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);box.addView(token);
-        button(box,"Save server settings",()->{try{Endpoint.parse(url.getText().toString());if(!token.getText().toString().isEmpty())Settings.token(this,token.getText().toString().trim());else Settings.token(this);Settings.prefs(this).edit().putString("endpoint",url.getText().toString().trim()).commit();token.setText("");toast("Settings saved");}catch(Exception e){toast(e.getMessage());}});
+        button(box,"Save server settings",()->{try{Endpoint.parse(url.getText().toString());if(!token.getText().toString().isEmpty())Settings.token(this,token.getText().toString().trim());else Settings.token(this);Settings.prefs(this).edit().putString("endpoint",url.getText().toString().trim()).commit();token.setText("");toast("Settings saved");}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}});
         button(box,"Pair voice button",this::pair);
-        button(box,"Start relay",()->{if(!permissions()){request();return;}try{Endpoint.parse(Settings.endpoint(this));Settings.token(this);if(Settings.prefs(this).getInt("association",-1)<0)throw new IllegalStateException("Pair the recorder first");Settings.prefs(this).edit().putBoolean("enabled",true).commit();observe(this);RelayService.start(this);UploadJob.schedule(this);refresh();}catch(Exception e){toast(e.getMessage());}});
+        button(box,"Start relay",()->{if(!permissions()){request();return;}try{Endpoint.parse(Settings.endpoint(this));Settings.token(this);if(Settings.prefs(this).getInt("association",-1)<0)throw new IllegalStateException("Pair the recorder first");Settings.prefs(this).edit().putBoolean("enabled",true).commit();observe(this);RelayService.start(this);UploadJob.schedule(this);refresh();}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}});
         button(box,"Stop relay",()->{Settings.prefs(this).edit().putBoolean("enabled",false).commit();stopService(new Intent(this,RelayService.class));getSystemService(android.app.job.JobScheduler.class).cancel(9041);refresh();});
         button(box,"Test server connection",()->io.submit(()->{String result=checkServer();Settings.status(this,result);refresh();}));
         button(box,"Retry queued uploads",()->io.submit(()->{try(QueueDb d=new QueueDb(this)){d.retryPending();}Uploader.drain(this);refresh();}));
@@ -88,27 +88,32 @@ public final class MainActivity extends Activity {
         }
     }
     @Override protected void onDestroy(){io.shutdown();super.onDestroy();}
-    private void pair(){if(!permissions()){request();return;}
+    private void pair(){
+        if(checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED||
+           checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED){request();return;}
         BluetoothAdapter a=getSystemService(BluetoothManager.class).getAdapter();if(a==null||!a.isEnabled()){toast("Enable Bluetooth first");return;}
         toast("Hold the recorder button for 1.5 seconds, then release. Enter its local pairing code when Android asks.");
         ScanFilter scan=new ScanFilter.Builder().setServiceUuid(new ParcelUuid(Wire.SERVICE)).build();
         BluetoothLeDeviceFilter filter=new BluetoothLeDeviceFilter.Builder().setScanFilter(scan).build();
         AssociationRequest request=new AssociationRequest.Builder().addDeviceFilter(filter).setSingleDevice(true).build();
         try{getSystemService(CompanionDeviceManager.class).associate(request,getMainExecutor(),new CompanionDeviceManager.Callback(){
-            @Override public void onAssociationPending(IntentSender sender){try{startIntentSenderForResult(sender,101,null,0,0,0);}catch(Exception e){toast(e.getMessage());}}
+            @Override public void onAssociationPending(IntentSender sender){try{startIntentSenderForResult(sender,101,null,0,0,0);}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}}
             @Override public void onAssociationCreated(AssociationInfo info){
                 if(info.getDeviceMacAddress()==null){toast("Association has no Bluetooth address");return;}
                 String address=info.getDeviceMacAddress().toString();Settings.prefs(MainActivity.this).edit().putInt("association",info.getId()).putString("address",address).commit();
-                try{BluetoothDevice dev=a.getRemoteDevice(address);if(dev.getBondState()!=BluetoothDevice.BOND_BONDED)dev.createBond();observe(MainActivity.this);toast("Association saved. Complete Bluetooth pairing, then Start relay.");refresh();}catch(Exception e){toast(e.getMessage());}
+                if(checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){
+                    toast("Bluetooth permission was revoked; grant it and pair again");return;
+                }
+                try{BluetoothDevice dev=a.getRemoteDevice(address);if(dev.getBondState()!=BluetoothDevice.BOND_BONDED)dev.createBond();observe(MainActivity.this);toast("Association saved. Complete Bluetooth pairing, then Start relay.");refresh();}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}
             }
             @Override public void onFailure(CharSequence error){toast("Pairing: "+error);}
-        });}catch(Exception e){toast(e.getMessage());}
+        });}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}
     }
     static void observe(Context c){
         int id=Settings.prefs(c).getInt("association",-1);String address=Settings.prefs(c).getString("address",null);if(id<0||address==null)return;
         try{CompanionDeviceManager m=c.getSystemService(CompanionDeviceManager.class);
             if(Build.VERSION.SDK_INT>=36)m.startObservingDevicePresence(new ObservingDevicePresenceRequest.Builder().setAssociationId(id).build());
             else m.startObservingDevicePresence(address);
-        }catch(Exception e){Settings.status(c,"Companion observation needs attention: "+e.getMessage());}
+        }catch(SecurityException e){Settings.status(c,"Companion permission needs attention");}catch(Exception e){Settings.status(c,"Companion observation needs attention");}
     }
 }

@@ -85,12 +85,12 @@ public final class RelayService extends Service {
             }
             gatt=a.getRemoteDevice(address).connectGatt(this,true,callback,BluetoothDevice.TRANSPORT_LE);
             Settings.metric(this,"connection","Waiting for recorder");
-        }catch(Exception e){fail("Bluetooth unavailable");}
+        }catch(SecurityException e){fail("Bluetooth permission was revoked");}catch(Exception e){fail("Bluetooth unavailable");}
     }
     private void closeConnection(){
         try{engine.disconnected();}catch(IOException e){Settings.metric(this,"recorder_problem","spool_sync_failed");}
         ctrl=meta=data=info=null;
-        if(gatt!=null){try{gatt.disconnect();gatt.close();}catch(RuntimeException ignored){}gatt=null;}
+        if(gatt!=null){try{gatt.disconnect();gatt.close();}catch(SecurityException ignored){}catch(RuntimeException ignored){}gatt=null;}
     }
     private void fail(String reason){
         if(destroyed)return;
@@ -102,12 +102,14 @@ public final class RelayService extends Service {
         waiting();
         try{if(gatt.writeCharacteristic(ctrl,value,BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)!=BluetoothStatusCodes.SUCCESS)
             fail("Bluetooth write could not start");}
+        catch(SecurityException e){fail("Bluetooth permission was revoked");}
         catch(RuntimeException e){fail("Bluetooth permission or write error");}
     }
     private void read(BluetoothGattCharacteristic characteristic){
         if(destroyed||gatt==null)return;
         waiting();
         try{if(!gatt.readCharacteristic(characteristic))fail("Bluetooth read could not start");}
+        catch(SecurityException e){fail("Bluetooth permission was revoked");}
         catch(RuntimeException e){fail("Bluetooth permission or read error");}
     }
     private void startTransfer(boolean skip){
@@ -119,12 +121,14 @@ public final class RelayService extends Service {
             if(status!=BluetoothGatt.GATT_SUCCESS||state==BluetoothProfile.STATE_DISCONNECTED){fail("Recorder disconnected");return;}
             if(state==BluetoothProfile.STATE_CONNECTED){
                 Settings.metric(RelayService.this,"connection","Connected; discovering services");
+                if(checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)!=android.content.pm.PackageManager.PERMISSION_GRANTED){fail("Bluetooth permission was revoked");return;}
                 waiting();if(!g.requestMtu(247)&&!g.discoverServices())fail("Cannot discover recorder");
             }
         });}
         @Override public void onMtuChanged(BluetoothGatt g,int mtu,int status){handler.post(()->{
             if(g!=gatt||destroyed)return;
             Settings.metric(RelayService.this,"mtu",Integer.toString(mtu));
+            if(checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)!=android.content.pm.PackageManager.PERMISSION_GRANTED){fail("Bluetooth permission was revoked");return;}
             waiting();if(!g.discoverServices())fail("Service discovery could not start");
         });}
         @Override public void onServicesDiscovered(BluetoothGatt g,int status){handler.post(()->{

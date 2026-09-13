@@ -22,26 +22,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Prepare Android emulator and Gradle
+      - name: Prepare Android tools and KVM
         shell: bash
         run: |
           set -euo pipefail
-          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          "$manager" 'platforms;android-36' 'build-tools;35.0.0' 'emulator' 'system-images;android-35;google_apis;x86_64' </dev/null
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name hermes-test --package 'system-images;android-35;google_apis;x86_64'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;35.0.0' </dev/null
           sudo chmod 666 /dev/kvm
           bash tools/bootstrap-gradle.sh
       - name: Run database migration and receipt tests on Android
-        shell: bash
-        run: |
-          set -euo pipefail
-          export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          "$ANDROID_HOME/emulator/emulator" -avd hermes-test -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/hermes-emulator.log 2>&1 &
-          trap 'adb emu kill || true' EXIT
-          timeout 240 adb wait-for-device
-          timeout 240 bash -c 'until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q 1; do sleep 2; done'
-          adb shell input keyevent 82
-          .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:connectedDebugAndroidTest
+        uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 2048M
+          emulator-boot-timeout: 600
+          disable-animations: true
+          script: .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:connectedDebugAndroidTest
       - name: Save test reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

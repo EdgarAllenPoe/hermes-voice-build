@@ -152,7 +152,16 @@ def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -
         command.append('--offline')
     # A personal test build, signed by Gradle with this machine's debug key.
     command += [':app:clean', ':app:assembleDebug', ':app:lintDebug']
-    run(command, logs / 'android-build.txt', env)
+    try:
+        run(command, logs / 'android-build.txt', env)
+    finally:
+        lint = ROOT/'android/app/build/reports/lint-results-debug.txt'
+        if lint.is_file():
+            shutil.copy2(lint,logs/'android-lint.txt')
+            text=lint.read_text(encoding='utf-8',errors='replace')
+            if 'Error:' in text:
+                print(text[:40000])
+
     apk = ROOT / 'android/app/build/outputs/apk/debug/app-debug.apk'
     verify_apk_structure(apk)
     run([tools['apksigner'], 'verify', '--verbose', '--print-certs', str(apk)], logs / 'apk-signature.txt', env)
