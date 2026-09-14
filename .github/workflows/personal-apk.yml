@@ -1,0 +1,63 @@
+name: Personal APK for local signing
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/personal-apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      HVB_UNSIGNED_PERSONAL_BUILD: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Android tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;35.0.0' </dev/null
+          bash tools/bootstrap-gradle.sh
+      - name: Compile the personal package without a signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:assembleDebug :app:lintDebug
+          mkdir -p publish/personal-unsigned
+          cp android/app/build/outputs/apk/debug/app-debug-unsigned.apk publish/personal-unsigned/Hermes-Voice-0.3.0-UNSIGNED.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging publish/personal-unsigned/Hermes-Voice-0.3.0-UNSIGNED.apk > publish/personal-unsigned/apk-badging.txt
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          from tools.build_binaries import verify_apk_structure
+          out=Path('publish/personal-unsigned')
+          apk=out/'Hermes-Voice-0.3.0-UNSIGNED.apk'
+          verify_apk_structure(apk)
+          text=(out/'apk-badging.txt').read_text()
+          assert "package: name='org.tomstout.hermesvoice' versionCode='3' versionName='0.3.0'" in text
+          assert "sdkVersion:'33'" in text and "targetSdkVersion:'36'" in text
+          (out/'build-result.json').write_text(json.dumps({
+              'source_commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],
+              'version':'0.3.0','package':'org.tomstout.hermesvoice',
+              'compiled':True,'signed':False,'installable':False,'hardware_tested':False,
+              'instruction':'Sign locally with the retained personal key before installation.'
+          },indent=2)+'\n')
+          (out/'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n'
+              for p in sorted(out.iterdir()) if p.name!='SHA256SUMS.txt'))
+          PY
+      - name: Save unsigned package and build evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: personal-apk-sign-locally
+          path: publish/personal-unsigned/
+          if-no-files-found: error
+          retention-days: 30

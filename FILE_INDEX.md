@@ -5,6 +5,7 @@
 - .github/workflows/build.yml
 - .github/workflows/firmware-retry.yml
 - .github/workflows/host-tests.yml
+- .github/workflows/personal-apk.yml
 - .github/workflows/speech-evaluation.yml
 - .gitignore
 - BLE_BUILD_FIX.md
@@ -131,6 +132,7 @@
 - tests/test_speech_evaluation.py
 - tests/test_storage_http.py
 - tests/test_worker.py
+- tools/SignPersonalApk.java
 - tools/audio_tool.py
 - tools/bootstrap-gradle.sh
 - tools/bootstrap_gradle.py

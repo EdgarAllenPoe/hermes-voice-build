@@ -1,5 +1,7 @@
 plugins { id 'com.android.application' }
 def ciBuild = System.getenv('HVB_CI_BUILD') == '1'
+def unsignedPersonalBuild = System.getenv('HVB_UNSIGNED_PERSONAL_BUILD') == '1'
+if (ciBuild && unsignedPersonalBuild) throw new GradleException('Choose either isolated CI tests or an unsigned personal package.')
 android {
     buildFeatures { buildConfig true }
     namespace 'org.tomstout.hermesvoice'
@@ -13,10 +15,10 @@ android {
         debug {
             def supplied = System.getenv('HVB_DEBUG_KEYSTORE')
             def personalKey = supplied ? file(supplied) : rootProject.file('../config/private/android-debug.keystore')
-            if (!ciBuild && !personalKey.isFile()) {
+            if (!ciBuild && !unsignedPersonalBuild && !personalKey.isFile()) {
                 throw new GradleException('Restore the existing personal signing key before building. Disposable CI tests require HVB_CI_BUILD=1.')
             }
-            if (supplied || !ciBuild) {
+            if (!unsignedPersonalBuild && (supplied || !ciBuild)) {
                 storeFile personalKey
                 storePassword 'android'
                 keyAlias 'androiddebugkey'
@@ -24,7 +26,10 @@ android {
             }
         }
     }
-    buildTypes { release { minifyEnabled false } }
+    buildTypes {
+        debug { if (unsignedPersonalBuild) signingConfig = null }
+        release { minifyEnabled false }
+    }
 }
 
 dependencies {
