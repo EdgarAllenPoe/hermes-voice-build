@@ -8,6 +8,7 @@
 - .github/workflows/personal-apk.yml
 - .github/workflows/speech-evaluation.yml
 - .gitignore
+- APK_v0.3_VERIFIED.md
 - BLE_BUILD_FIX.md
 - BOARD_INTEGRATION_NOTES.md
 - BUILD_NOTES.md
@@ -65,6 +66,7 @@
 - docs/08-troubleshooting.md
 - docs/09-security.md
 - docs/10-prehardware.md
+- docs/11-personal-apk.md
 - docs/HARDWARE-GUIDE.md
 - docs/Hermes-Voice-Hardware-Guide.docx
 - docs/hardware-guide.json

@@ -14,7 +14,7 @@ Recorded September 13, 2026. This report supersedes the software-test status in 
 | Explicit prebuilt bundle checker | 7 tests passed on Windows and within the Linux suite; original delivered bundle passed check-only verification | tests/test_flash_prebuilt.py; no device accessed |
 | Printable Word guide | DOCX ZIP/XML integrity, wiring labels and table widths checked; wiring diagram visually inspected | Final page-by-page print-layout check is pending permission to use the installed LibreOffice on Windows |
 
-The Android build has nonfatal lint warnings; a successful lint task is not a claim of zero warnings. Build artifacts use the disposable CI identity. No personal version 0.3 APK or firmware was delivered, installed or flashed during this update. The original private version 0.2 binaries remain unchanged.
+The Android build has nonfatal lint warnings; a successful lint task is not a claim of zero warnings. Build artifacts use the disposable CI identity. At the September 13 checkpoint, no personal version 0.3 APK or firmware had been delivered, installed or flashed. The [September 14 APK build record](APK_v0.3_VERIFIED.md) documents the subsequently built and locally signed personal APK. The original private version 0.2 binaries remain unchanged.
 
 ## What the host tests exercise
 

@@ -4,7 +4,7 @@
 
 Version 0.3 adds simulated recorder tests, a worker-thread Android relay, safe queue migration and per-message holds, firmware corruption quarantine and diagnostics, stable personal build identities, transcript review commands, fair worker scheduling, deliberate cleanup, and a speech comparison tool. Start with [the prehardware guide](docs/10-prehardware.md) and [the current test report](TEST_REPORT_v0.3.md). The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx), with a [browsable text version](docs/HARDWARE-GUIDE.md).
 
-Hardware is still on order. Software checks and successful builds do not establish microphone, Bluetooth, charging, or battery behavior. The separately delivered v0.2 binaries below are preserved and do not contain the new v0.3 behavior. Build v0.3 from source with the retained personal identity before using its new features.
+Hardware is still on order. Software checks and successful builds do not establish microphone, Bluetooth, charging, or battery behavior. The separately delivered v0.2 binaries below are preserved and do not contain the new v0.3 behavior. The personal v0.3 APK is now built and locally signed with the retained identity; see [its verification record](APK_v0.3_VERIFIED.md). New firmware features still require a personal v0.3 firmware build.
 
 Android relay and recorder firmware for the **Seeed Studio XIAO nRF54LM20A Sense**. Not firmware for nRF54L15, nRF52840, or nRF54LM20B.
 
