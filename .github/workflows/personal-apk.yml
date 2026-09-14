@@ -44,7 +44,7 @@ jobs:
           text=(out/'apk-badging.txt').read_text()
           print(text)
           assert "package: name='org.tomstout.hermesvoice' versionCode='3' versionName='0.3.0'" in text
-          assert "sdkVersion:'33'" in text and "targetSdkVersion:'36'" in text
+          assert "minSdkVersion:'33'" in text and "targetSdkVersion:'36'" in text
           (out/'build-result.json').write_text(json.dumps({
               'source_commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],
               'version':'0.3.0','package':'org.tomstout.hermesvoice',
