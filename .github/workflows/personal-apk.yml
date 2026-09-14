@@ -42,6 +42,7 @@ jobs:
           apk=out/'Hermes-Voice-0.3.0-UNSIGNED.apk'
           verify_apk_structure(apk)
           text=(out/'apk-badging.txt').read_text()
+          print(text)
           assert "package: name='org.tomstout.hermesvoice' versionCode='3' versionName='0.3.0'" in text
           assert "sdkVersion:'33'" in text and "targetSdkVersion:'36'" in text
           (out/'build-result.json').write_text(json.dumps({
