@@ -1,5 +1,9 @@
 """Host-only checks for the configured source and binary verification helpers."""
 import importlib.util
+import contextlib
+import io
+import os
+import sys
 import json
 from pathlib import Path
 import tempfile
@@ -55,3 +59,18 @@ class BuildPackageTests(unittest.TestCase):
                 z.writestr('AndroidManifest.xml', '<manifest/>')
                 z.writestr('classes.dex', 'source code is not DEX')
             with self.assertRaises(ValueError): BUILDER.verify_apk_structure(p)
+
+
+    def test_build_logs_preserve_unicode_with_legacy_child_encoding(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            log = Path(tmp)/'unicode.txt'
+            env = dict(os.environ, PYTHONIOENCODING='ascii')
+            BUILDER.run([sys.executable, '-c', 'print(chr(0x2514))'], log, env)
+            self.assertEqual(log.read_text(encoding='utf-8'), chr(0x2514)+'\n')
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows Git path handling')
+    def test_vendor_git_commands_get_long_path_support(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            log = Path(tmp)/'git.txt'
+            BUILDER.run(['git', 'config', '--get', 'core.longpaths'], log)
+            self.assertEqual(log.read_text(encoding='utf-8').strip(), 'true')

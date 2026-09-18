@@ -67,6 +67,7 @@
 - docs/09-security.md
 - docs/10-prehardware.md
 - docs/11-personal-apk.md
+- docs/12-first-flash.md
 - docs/HARDWARE-GUIDE.md
 - docs/Hermes-Voice-Hardware-Guide.docx
 - docs/hardware-guide.json
@@ -121,6 +122,7 @@
 - tests/test_audio.py
 - tests/test_build_package.py
 - tests/test_button.py
+- tests/test_firmware_nvs.py
 - tests/test_flash_prebuilt.py
 - tests/test_flash_simulation.py
 - tests/test_identity.py

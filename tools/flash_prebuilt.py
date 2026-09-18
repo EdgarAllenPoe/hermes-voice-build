@@ -3,7 +3,8 @@
 
 No compilation, key rotation, downloads, or hardware access in the default mode.
 Requires an installed Seeed platform and its PlatformIO OpenOCD 3.1200.x package.
-The actual flash step has NOT been exercised on a physical board by the author.
+The vendor write/verify/reset sequence was exercised on one board on 2026-09-18;
+see docs/12-first-flash.md for evidence and remaining acceptance tests.
 Based on the exact vendor target/loader at commit
 1ec1287f8e4bc4067a6fd593991e36875aef989f; see docs/Hermes-Voice-Hardware-Guide.docx.
 """
@@ -134,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     print('\nDisconnect the LiPo and all other debug probes. Connect ONLY the exact XIAO nRF54LM20A Sense by a USB data cable, with its antenna attached.')
     print('This replaces its application. On first boot the application claims external flash for its recordings; preserve any previous valuable data first.')
     print('Automatic mass erase/recovery is disabled. Stop and diagnose a locked/unrecognized board; do not substitute a different target.')
-    print('The upload sequence has not been hardware-tested by this kit author.')
+    print('The vendor write/verify/reset sequence passed on one board; see docs/12-first-flash.md. Functional acceptance is still required.')
     print('Command: ' + subprocess.list2cmdline(command))
     if not sys.stdin.isatty():
         raise ValueError('Flashing requires an interactive terminal; confirmation cannot be piped.')

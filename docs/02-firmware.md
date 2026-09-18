@@ -50,6 +50,14 @@ Then manually check charger current 100 mA, termination 4.20 V, the 3.3 V microp
 
 The BLE compiler workaround flags included with this project come from Seeed's current example configuration [S3]. If a later vendor release removes a symbol, inspect the new release rather than suppressing unrelated configuration failures. `CONFIG_ARM_MPU=n` is a vendor-example workaround, not a general security recommendation for every future release.
 
+## Pairing-storage geometry
+
+The SPI NOR driver defaults to 64 KiB layout pages. Zephyr NVS stores its sector size in a 16-bit field and rejects that default with `-EDOM`; Bluetooth cannot initialize its pairing-settings backend. The first physical board exposed this failure after the image had flashed and verified correctly.
+
+The firmware explicitly selects `CONFIG_SPI_NOR_FLASH_LAYOUT_PAGE_SIZE=4096`. This uses the driver's supported 4 KiB sector layout without changing the audio or settings partition boundaries. The preflight checker now rejects the 64 KiB default, an overflowing sector multiplier, or a sector count that does not fit the settings partition.
+
+On Windows, the build helper supplies UTF-8 to its Python subprocesses and enables Git long-path support only for its build commands. This prevents failed vendor-library checkouts and dependency-report encoding errors without modifying global Git settings.
+
 ## Flashing and first boot
 
 Use the explicit prebuilt-bundle helper described in the [printable workshop guide](HARDWARE-GUIDE.md). Keep the battery disconnected and attach the supplied antenna. Replace the path below with the exact successful timestamped build directory:
@@ -61,7 +69,7 @@ python3 tools/flash_prebuilt.py --bundle /absolute/path/to/successful/dist-folde
 
 The first command only verifies hashes and generated configuration; it does not access hardware. The second verifies the exact vendor loader, disables its automatic mass-erase recovery hook, and requires the displayed typed confirmation before writing and verifying the HEX. Install the pinned PlatformIO OpenOCD 3.1200.x package as described in the workshop guide.
 
-Preserve wanted recordings and any prior external-flash data before programming. Stop on a locked or unrecognized board instead of using a guessed recovery command. On first use, the application claims its external-flash recording partition. Begin with USB-only tests; no successful physical flash or boot has been claimed.
+Preserve wanted recordings and any prior external-flash data before programming. Stop on a locked or unrecognized board instead of using a guessed recovery command. On first use, the application claims its external-flash recording partition. The first physical flash and application initialization are recorded in [guide 12](12-first-flash.md). Continue with USB-only functional tests; microphone, phone pairing, and battery/charger acceptance remain outstanding.
 
 For troubleshooting, use a debugger or temporarily enable a verified vendor console configuration; the normal build disables serial console output.
 

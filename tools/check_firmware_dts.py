@@ -9,6 +9,19 @@ import re
 from pathlib import Path
 
 
+def validate_nvs_geometry(values: dict[str, str], partition_size: int) -> None:
+    page = int(values.get('CONFIG_SPI_NOR_FLASH_LAYOUT_PAGE_SIZE', '-1'), 0)
+    multiple = int(values.get('CONFIG_SETTINGS_NVS_SECTOR_SIZE_MULT', '-1'), 0)
+    count = int(values.get('CONFIG_SETTINGS_NVS_SECTOR_COUNT', '-1'), 0)
+    if page != 4096:
+        raise ValueError('SPI NOR layout must use 4096-byte sectors for pairing storage')
+    sector = page * multiple
+    if multiple < 1 or sector > 65535 or sector & (sector - 1):
+        raise ValueError('NVS sector size must be a power of two that fits its 16-bit field')
+    if count < 2 or sector * count > partition_size:
+        raise ValueError('NVS needs at least two sectors within the settings partition')
+
+
 def validate(dts: str, config: str) -> None:
     text = re.sub(r'/\*.*?\*/', '', dts, flags=re.S)
     def need(ok, message):
@@ -49,6 +62,7 @@ def validate(dts: str, config: str) -> None:
         need(re.search(r'\b' + label + r'\s*:', text), 'Missing exact-board label ' + label)
     need('voice-button' in text, 'Missing capture-button alias')
     values = dict(re.findall(r'^(CONFIG_\w+)=(.+)$', config, re.M))
+    validate_nvs_geometry(values, cells(leaf('hvb_settings'), 'reg')[1])
     for symbol in ('SENSOR', 'REGULATOR', 'ENTROPY_GENERATOR', 'CSPRNG_ENABLED',
                    'HARDWARE_DEVICE_CS_GENERATOR', 'BT_SMP', 'BT_SMP_SC_ONLY',
                    'BT_FIXED_PASSKEY', 'BT_SMP_APP_PAIRING_ACCEPT', 'BT_SETTINGS',
@@ -74,7 +88,7 @@ def main() -> int:
         validate(args.dts.read_text(), config.read_text())
     except (OSError, ValueError) as exc:
         parser.exit(1, f'PREFLIGHT FAILED: {exc}\nDo not attach the LiPo until corrected and measured.\n')
-    print('Generated DTS/Kconfig checks passed: 100 mA / 4.20 V charger, 3.3 V rails, partition ranges, P1.00 button, secure RNG/BLE, and charger-before-regulator initialization.')
+    print('Generated DTS/Kconfig checks passed: 100 mA / 4.20 V charger, 3.3 V rails, partition ranges, NVS sector geometry, P1.00 button, secure RNG/BLE, and charger-before-regulator initialization.')
     print('This is not a physical charger, microphone, Bluetooth, or battery test.')
     return 0
 

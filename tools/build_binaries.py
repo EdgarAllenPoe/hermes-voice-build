@@ -71,13 +71,22 @@ def run(command: list[str], log: Path, env: dict[str, str] | None = None) -> Non
     """Stream compiler diagnostics to the terminal and preserve the same build log."""
     print('\nRunning: ' + subprocess.list2cmdline(command), flush=True)
     log.parent.mkdir(parents=True, exist_ok=True)
+    child_env = dict(os.environ if env is None else env)
+    child_env.update(PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
+    if os.name == 'nt':
+        # Scope long-path support to these builds, including vendor Git clones.
+        count = int(child_env.get('GIT_CONFIG_COUNT', '0'))
+        child_env[f'GIT_CONFIG_KEY_{count}'] = 'core.longpaths'
+        child_env[f'GIT_CONFIG_VALUE_{count}'] = 'true'
+        child_env['GIT_CONFIG_COUNT'] = str(count + 1)
     with log.open('w', encoding='utf-8') as output:
-        proc = subprocess.Popen(command, cwd=ROOT, env=env, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(command, cwd=ROOT, env=child_env, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace')
         assert proc.stdout is not None
         for line in proc.stdout:
             print(line, end='', flush=True)
             output.write(line)
+        proc.stdout.close()
         code = proc.wait()
     if code:
         raise RuntimeError(f'Command failed with exit {code}; see {log}')
@@ -221,6 +230,10 @@ def build_firmware(tools: dict[str, str], out: Path, logs: Path, offline: bool) 
 
 
 def main() -> int:
+    # PlatformIO prints Unicode dependency trees even when stdout is a pipe.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', choices=('all', 'android', 'firmware'), default='all')
     parser.add_argument('--check', action='store_true', help='Check tools only; does not build or change device configuration')
