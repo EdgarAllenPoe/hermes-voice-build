@@ -70,6 +70,7 @@
 - docs/10-prehardware.md
 - docs/11-personal-apk.md
 - docs/12-first-flash.md
+- docs/13-server-commissioning.md
 - docs/HARDWARE-GUIDE.md
 - docs/Hermes-Voice-Hardware-Guide.docx
 - docs/hardware-guide.json

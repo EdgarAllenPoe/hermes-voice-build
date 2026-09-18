@@ -1,5 +1,7 @@
 # 04 — Hermes host installation and Tailscale setup
 
+The existing host was commissioned on September 18, 2026. See [the deployment record and remaining phone setup](13-server-commissioning.md) before repeating installation.
+
 ## Assumptions to confirm
 
 These scripts target a **Linux host with Python 3.10+ and user systemd**, using your ordinary Hermes login account. Arch, Debian, Ubuntu and other distributions have different package installation commands; the host OS has not been supplied. Do not paste guessed distro package commands into a different system.
