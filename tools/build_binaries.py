@@ -255,8 +255,8 @@ def main() -> int:
     out.mkdir(parents=True)
     logs.mkdir(parents=True)
     result = {'created_utc': stamp, 'target': args.target, 'complete': False,
-              'hardware_tested': False, 'version':'0.3.0' if args.target=='firmware' else '0.3.1',
-              'component_versions': {'android':'0.3.1','firmware':'0.3.0'}, 'identity_profile':'ci-disposable' if os.environ.get('HVB_CI_BUILD')=='1' else 'personal', 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
+              'hardware_tested': False, 'version':'0.3.1',
+              'component_versions': {'android':'0.3.1','firmware':'0.3.1'}, 'identity_profile':'ci-disposable' if os.environ.get('HVB_CI_BUILD')=='1' else 'personal', 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
     code = 1
     try:
         if args.target in ('all', 'android'):

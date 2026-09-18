@@ -1,6 +1,6 @@
 # Receiver commissioning on September 18, 2026
 
-The receiver and local transcription worker are installed as user services on the existing Hermes host. The phone user confirmed successful Bluetooth pairing with personal APK 0.3.1. A physical recording uploaded by the phone has not yet been confirmed.
+The receiver and local transcription worker are installed as user services on the existing Hermes host. The phone user confirmed successful Bluetooth pairing with personal APK 0.3.1. A 2.28-second manual recording from the Sense board has now passed through the phone and produced a transcript. It remains in review, without a Hermes invocation.
 
 ## Installed configuration
 
@@ -33,4 +33,4 @@ A private copy of the token is in the delivery kit at private/Hermes-Voice-serve
 
 Keep Tailscale and Bluetooth connected. Double-click the board's B button, speak a short harmless phrase, and click B once to stop. Check the app's status and then the server queue. One vibration indicates receipt by the phone; two indicate acceptance by the server. Neither confirms transcription or agent execution.
 
-Pairing is user-confirmed; microphone quality, real phone delivery, and reviewed Hermes handoff remain to be tested. Keep delivery mode review during those tests. The private commissioning JSON in the delivery kit contains the synthetic receipts and speech-test record without the server token.
+Pairing, one physical microphone recording, real phone delivery, and transcription are confirmed. Automatic speech detection needed a sensitivity correction; see [the microphone commissioning record](14-microphone-commissioning.md). Wider speech-quality testing and reviewed Hermes handoff remain to be tested. Keep delivery mode review during those tests. The private commissioning JSON in the delivery kit contains the synthetic receipts and speech-test record without the server token.

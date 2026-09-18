@@ -25,8 +25,8 @@ The private delivery folder firmware-v0.3 retains the tested HEX/BIN/ELF, genera
 
 ## Remaining hardware acceptance
 
-Phone pairing, microphone capture, recording transfer, speech quality, power-interruption recovery, and electrical charger/battery measurements remain to be performed. Successful programming and initialization do not certify those functions. Continue with USB power and the hardware guide's commissioning procedure.
+At the time of the initial flash, phone pairing, capture, transfer, and the other physical checks were still pending. The later pairing and manual recording checks below now pass. Wider speech-quality testing, power-interruption recovery, and electrical charger/battery measurements remain open. Continue with USB power and the hardware guide's commissioning procedure.
 
 ## Subsequent pairing and server setup
 
-The user confirmed phone pairing after updating the personal APK to 0.3.1. See [the APK verification record](../APK_v0.3.1_VERIFIED.md) and [receiver commissioning](13-server-commissioning.md). Physical microphone capture and phone recording delivery still require confirmation.
+The user confirmed phone pairing after updating the personal APK to 0.3.1. See [the APK verification record](../APK_v0.3.1_VERIFIED.md) and [receiver commissioning](13-server-commissioning.md). A subsequent 2.28-second manual recording confirmed physical microphone capture, phone delivery, and server transcription. See [microphone commissioning](14-microphone-commissioning.md) for the speech-detection correction and remaining tests.

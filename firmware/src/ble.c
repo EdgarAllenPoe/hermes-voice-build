@@ -41,7 +41,7 @@ static ssize_t read_data(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,
 static ssize_t read_info(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){
     uint8_t info[32]={1,0,0,0,0,0,0,0};info[1]=atomic_get(&hvb_recording)?1:0;
     info[2]=(uint8_t)hvb_store_count();sys_put_le16(hvb_battery_mv(),info+4);
-    info[8]=1;info[9]=0;info[10]=3;info[11]=0; /* diagnostic schema and firmware version */
+    info[8]=1;info[9]=0;info[10]=3;info[11]=1; /* diagnostic schema and firmware version */
     hvb_capture_diagnostics(info+12);hvb_store_diagnostics(info+24);
     sys_put_le16(1,info+30); /* capability bit 0: connection-local SKIP */
     return bt_gatt_attr_read(c,a,b,n,o,info,sizeof(info));

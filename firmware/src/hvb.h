@@ -8,7 +8,6 @@
 #define HVB_SLOT_SIZE 0x80000u
 #define HVB_SLOTS 15
 #define HVB_MAX_BYTES (64u+3000u*164u)
-#define HVB_VAD_THRESHOLD 300u
 extern atomic_t hvb_recording;
 int hvb_store_init(void);
 int hvb_store_begin(uint8_t header[64]);
