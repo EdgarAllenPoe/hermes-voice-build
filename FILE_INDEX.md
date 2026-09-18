@@ -8,6 +8,7 @@
 - .github/workflows/personal-apk.yml
 - .github/workflows/speech-evaluation.yml
 - .gitignore
+- APK_v0.3.1_VERIFIED.md
 - APK_v0.3_VERIFIED.md
 - BLE_BUILD_FIX.md
 - BOARD_INTEGRATION_NOTES.md

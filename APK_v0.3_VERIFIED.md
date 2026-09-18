@@ -1,5 +1,7 @@
 # Verified personal APK 0.3.0
 
+Superseded by [personal APK 0.3.1](APK_v0.3.1_VERIFIED.md), which fixes the Bluetooth address error during pairing.
+
 Built and locally signed September 14, 2026. This supersedes the earlier statement that only a CI version 0.3 APK existed. The original version 0.2 APK and firmware are preserved.
 
 | Item | Verified value |
