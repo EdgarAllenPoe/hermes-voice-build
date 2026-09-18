@@ -1,6 +1,6 @@
 # Receiver commissioning on September 18, 2026
 
-The receiver and local transcription worker are installed as user services on the existing Hermes host. The phone user confirmed successful Bluetooth pairing with personal APK 0.3.1. A 2.28-second manual recording from the Sense board has now passed through the phone and produced a transcript. It remains in review, without a Hermes invocation.
+The receiver and local transcription worker are installed as user services on the existing Hermes host. The phone user confirmed successful Bluetooth pairing with personal APK 0.3.1. A 2.28-second manual recording from the Sense board has now passed through the phone and produced a transcript. A subsequent 8.28-second recording with firmware 0.3.1 also uploaded and was transcribed after an automatic silence stop. Both remain in review, without a Hermes invocation.
 
 ## Installed configuration
 

@@ -28,11 +28,11 @@ A saved recording that reaches the phone confirms the Bluetooth data path. A cor
 - The personal 0.3.1 clean build passed generated DTS/Kconfig, HEX/ELF, and checksum checks.
 - OpenOCD programmed and readback-verified all 197,112 image bytes on the connected board. Debug recovery was not used.
 - Hardware breakpoints confirmed successful Bluetooth initialization and application startup; the breakpoints were removed and execution resumed.
-- The next physical automatic-stop test is pending.
+- After the update, the user confirmed that the green light stayed on during continuous speech and went out after a pause. The resulting 8.28-second recording reached the receiver, produced a transcript, and entered review with automatic-stop flags (0). Microphone-start, audio-read, dropped-button-edge, and flash-error counters remained zero.
 
 The private delivery is in firmware-v0.3.1 beside the source folder, with its build manifest and verification records. The HEX SHA-256 is ede6418fa3a9cdb18713685096fd9d9a0c479263f0f698320a27c205ab098da5. Keep the firmware and pairing card private.
 
-## Next physical check
+## Repeat the physical check
 
 1. Keep the board on USB and the phone relay and Tailscale running.
 2. Double-click B and speak continuously for about eight seconds near the microphone.
