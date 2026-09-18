@@ -98,3 +98,13 @@ Phone receipts are retained after server acceptance, while their audio BLOB is c
 Use Test server connection before pairing to verify the configured server/token. Refresh status shows phone queue usage, connection, transfer progress and the last recorder snapshot. Export diagnostics writes only the diagnostic allowlist; it excludes credentials, endpoint, Bluetooth address and audio. Review held uploads explains permanent per-message rejections and offers explicit retry after the cause is corrected. Pending recordings use bounded backoff; Retry queued uploads makes them eligible immediately. Android scheduling can still delay background work.
 
 Schema 1 databases are upgraded in place to schema 2, retaining existing audio and receipts. Personal v0.3 builds must use the original signing key. The CI app has a separate package and is intended for disposable software testing. See guide 10.
+
+## Version 0.3.1 pairing correction
+
+Android's companion association returns a MacAddress whose string representation uses lowercase letters. BluetoothAdapter.getRemoteDevice requires uppercase letters and rejected that address in version 0.3.0. The app now normalizes and validates the address before saving or using it. Relay connections and companion presence observation also repair saved lowercase addresses during normal use, preserving the association ID and other settings.
+
+Install the personal 0.3.1 APK as an update over 0.3.0; do not uninstall or clear app storage. Hold the board's B button for about two seconds, release, and use Pair voice button in the app again. Complete Android's separate pairing prompt with the existing private passkey if asked. This app fix does not require a firmware flash or bond reset.
+
+The emulator regression uses the actual Android MacAddress and BluetoothAdapter classes to reproduce the failure and verify the corrected handoff. Further cases cover invalid input, already-valid addresses, saved-address repair, and an unpaired installation. Physical phone pairing still requires confirmation on the user's device.
+
+Android API contract: https://developer.android.com/reference/android/bluetooth/BluetoothAdapter#getRemoteDevice(java.lang.String)

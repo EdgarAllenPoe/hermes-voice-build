@@ -100,18 +100,23 @@ public final class MainActivity extends Activity {
             @Override public void onAssociationPending(IntentSender sender){try{startIntentSenderForResult(sender,101,null,0,0,0);}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}}
             @Override public void onAssociationCreated(AssociationInfo info){
                 if(info.getDeviceMacAddress()==null){toast("Association has no Bluetooth address");return;}
-                String address=info.getDeviceMacAddress().toString();Settings.prefs(MainActivity.this).edit().putInt("association",info.getId()).putString("address",address).commit();
                 if(checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){
                     toast("Bluetooth permission was revoked; grant it and pair again");return;
                 }
-                try{BluetoothDevice dev=a.getRemoteDevice(address);if(dev.getBondState()!=BluetoothDevice.BOND_BONDED)dev.createBond();observe(MainActivity.this);toast("Association saved. Complete Bluetooth pairing, then Start relay.");refresh();}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}
+                try{
+                    String address=Settings.bluetoothAddress(info.getDeviceMacAddress().toString());
+                    BluetoothDevice dev=a.getRemoteDevice(address);
+                    Settings.prefs(MainActivity.this).edit().putInt("association",info.getId()).putString("address",address).commit();
+                    if(dev.getBondState()!=BluetoothDevice.BOND_BONDED)dev.createBond();observe(MainActivity.this);toast("Association saved. Complete Bluetooth pairing, then Start relay.");refresh();}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}
             }
             @Override public void onFailure(CharSequence error){toast("Pairing: "+error);}
         });}catch(SecurityException e){toast("Bluetooth permission was revoked");}catch(Exception e){toast(e.getMessage());}
     }
     static void observe(Context c){
-        int id=Settings.prefs(c).getInt("association",-1);String address=Settings.prefs(c).getString("address",null);if(id<0||address==null)return;
-        try{CompanionDeviceManager m=c.getSystemService(CompanionDeviceManager.class);
+        int id=Settings.prefs(c).getInt("association",-1);if(id<0)return;
+        try{
+            String address=Settings.recorderAddress(c);if(address==null)return;
+            CompanionDeviceManager m=c.getSystemService(CompanionDeviceManager.class);
             if(Build.VERSION.SDK_INT>=36)m.startObservingDevicePresence(new ObservingDevicePresenceRequest.Builder().setAssociationId(id).build());
             else m.startObservingDevicePresence(address);
         }catch(SecurityException e){Settings.status(c,"Companion permission needs attention");}catch(Exception e){Settings.status(c,"Companion observation needs attention");}

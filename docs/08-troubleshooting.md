@@ -12,7 +12,7 @@ Do not change firmware, Android, Tailscale and Hermes simultaneously. Establish 
 | Auto-stop never happens | Background noise, energy threshold, 60 s cap/manual stop | Assume the energy gate recognizes human speech |
 | Auto-stop too early | Natural pauses versus 1.2 s timeout | Increase sensitivity blindly without noise tests |
 | Recorder not in pairing chooser | Physical pairing window, antenna, Bluetooth/Location Services, wrong device/bond | Share the passkey publicly |
-| Android association exists but transfer fails | Separate Bluetooth bond/passkey, permissions, authenticated characteristic access | Treat association as equivalent to pairing |
+| Pairing reports an invalid Bluetooth address | Update the personal app to 0.3.1 or later, then retry Pair voice button; 0.3.0 passed lowercase addresses to an uppercase-only Android API | Uninstall the app, erase its data, or reflash the recorder for this formatting error |\n| Android association exists but transfer fails | Separate Bluetooth bond/passkey, permissions, authenticated characteristic access | Treat association as equivalent to pairing |
 | Locked phone does not respond | First unlock, Force stop status, relay enabled, OS battery restrictions | Promise Android restrictions can be bypassed |
 | Phone saved file but no second vibration | Tailscale status, endpoint/token, server logs, phone pending queue | Delete app data to “start fresh” |
 | HTTP 401 | Token mismatch; save the correct local token | Put a token in the URL or paste it in chat |

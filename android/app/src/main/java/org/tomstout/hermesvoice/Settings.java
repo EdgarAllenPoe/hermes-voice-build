@@ -11,6 +11,23 @@ final class Settings {
     static final String DEFAULT_ENDPOINT="http://100.99.200.55:8765/v1/voice";
     static String endpoint(Context c){return prefs(c).getString("endpoint",DEFAULT_ENDPOINT);}
     static SharedPreferences prefs(Context c){return c.getSharedPreferences("settings",Context.MODE_PRIVATE);}
+    // MacAddress.toString() is lowercase; Android Bluetooth APIs require uppercase.
+    static String bluetoothAddress(String address){
+        if(address==null)throw new IllegalArgumentException("Recorder has no Bluetooth address; pair again");
+        String normalized=address.toUpperCase(java.util.Locale.ROOT);
+        if(!android.bluetooth.BluetoothAdapter.checkBluetoothAddress(normalized))
+            throw new IllegalArgumentException("Recorder address is invalid; pair again");
+        return normalized;
+    }
+    static String recorderAddress(Context c){
+        SharedPreferences p=prefs(c);
+        String saved=p.getString("address",null);
+        if(saved==null)return null;
+        String normalized=bluetoothAddress(saved);
+        // Repair addresses saved by 0.3.0 without replacing bonds, credentials or audio.
+        if(!normalized.equals(saved))p.edit().putString("address",normalized).apply();
+        return normalized;
+    }
     static void metric(Context c,String key,String value){
         c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit().putString(key,value).apply();
     }

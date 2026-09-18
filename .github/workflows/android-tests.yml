@@ -1,4 +1,4 @@
-name: Android database tests
+name: Android database and pairing tests
 on:
   push:
     branches: [main]
@@ -29,7 +29,7 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;35.0.0' </dev/null
           sudo chmod 666 /dev/kvm
           bash tools/bootstrap-gradle.sh
-      - name: Run database migration and receipt tests on Android
+      - name: Run database and Bluetooth address regression tests on Android
         uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808
         with:
           api-level: 35

@@ -31,6 +31,7 @@
 - USER_CONFIGURATION.md
 - VERIFIED_BUILD.md
 - android/app/build.gradle
+- android/app/src/androidTest/java/org/tomstout/hermesvoice/PairingAddressTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/QueueDbTest.java
 - android/app/src/main/AndroidManifest.xml
 - android/app/src/main/java/org/tomstout/hermesvoice/BootReceiver.java

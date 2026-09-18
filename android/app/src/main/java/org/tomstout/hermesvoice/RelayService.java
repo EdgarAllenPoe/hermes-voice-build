@@ -77,7 +77,7 @@ public final class RelayService extends Service {
     private void connect(){
         if(destroyed||!Settings.enabled(this)||gatt!=null)return;
         try{
-            String address=Settings.prefs(this).getString("address",null);
+            String address=Settings.recorderAddress(this);
             BluetoothAdapter a=getSystemService(BluetoothManager.class).getAdapter();
             if(address==null||a==null||!a.isEnabled()){
                 Settings.metric(this,"connection","Bluetooth off or recorder unpaired");
