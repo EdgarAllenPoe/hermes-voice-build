@@ -168,6 +168,7 @@
 - tools/prepare-whisper.sh
 - tools/provision.py
 - tools/restore_identity.py
+- tools/run_android_ui_tests.sh
 - tools/run_tests.sh
 - tools/send_recording.py
 - tools/update_snapshot.py

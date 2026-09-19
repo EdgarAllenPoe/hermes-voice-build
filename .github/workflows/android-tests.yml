@@ -2,9 +2,9 @@ name: Android app tests
 on:
   push:
     branches: [main]
-    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh']
+    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh', 'tools/run_android_ui_tests.sh']
   pull_request:
-    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh']
+    paths: ['android/**', '.github/workflows/android-tests.yml', 'tools/bootstrap-gradle.sh', 'tools/run_android_ui_tests.sh']
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,13 +43,7 @@ jobs:
           ram-size: 2048M
           emulator-boot-timeout: 600
           disable-animations: true
-          script: .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:connectedDebugAndroidTest
-      - name: Collect UI screenshots
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p android/ui-screenshots
-          adb pull /sdcard/Android/data/org.tomstout.hermesvoice.ci/files/ui-screenshots android/ui-screenshots/ || true
+          script: bash tools/run_android_ui_tests.sh
       - name: Save test reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
