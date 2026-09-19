@@ -33,12 +33,15 @@
 - USER_CONFIGURATION.md
 - VERIFIED_BUILD.md
 - android/app/build.gradle
+- android/app/src/androidTest/java/org/tomstout/hermesvoice/DashboardActivityTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/PairingAddressTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/QueueDbTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/RecorderStatusTest.java
 - android/app/src/main/AndroidManifest.xml
 - android/app/src/main/java/org/tomstout/hermesvoice/BootReceiver.java
 - android/app/src/main/java/org/tomstout/hermesvoice/CompanionService.java
+- android/app/src/main/java/org/tomstout/hermesvoice/DashboardReader.java
+- android/app/src/main/java/org/tomstout/hermesvoice/DashboardState.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Endpoint.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Feedback.java
 - android/app/src/main/java/org/tomstout/hermesvoice/MainActivity.java
@@ -46,6 +49,7 @@
 - android/app/src/main/java/org/tomstout/hermesvoice/RecorderInfo.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RecorderStatus.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RelayService.java
+- android/app/src/main/java/org/tomstout/hermesvoice/ServerHealth.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Settings.java
 - android/app/src/main/java/org/tomstout/hermesvoice/TransferEngine.java
 - android/app/src/main/java/org/tomstout/hermesvoice/UploadJob.java
@@ -53,6 +57,8 @@
 - android/app/src/main/java/org/tomstout/hermesvoice/Uploader.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Wire.java
 - android/app/src/main/res/drawable/ic_voice.xml
+- android/app/src/main/res/values-night/styles.xml
+- android/app/src/main/res/values/styles.xml
 - android/app/src/main/res/xml/network_security_config.xml
 - android/build.gradle
 - android/gradle.properties
@@ -116,6 +122,7 @@
 - receiver/requirements.txt
 - receiver/systemd/hermes-voice-receiver.service
 - receiver/systemd/hermes-voice-worker.service
+- tests/DashboardStateTest.java
 - tests/RelayEngineTest.java
 - tests/WireTest.java
 - tests/host_shim/storage_harness.c
@@ -129,6 +136,7 @@
 - tests/test_audio.py
 - tests/test_build_package.py
 - tests/test_button.py
+- tests/test_dashboard.py
 - tests/test_firmware_nvs.py
 - tests/test_flash_prebuilt.py
 - tests/test_flash_simulation.py

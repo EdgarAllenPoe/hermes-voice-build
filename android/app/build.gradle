@@ -6,7 +6,7 @@ android {
     buildFeatures { buildConfig true }
     namespace 'org.tomstout.hermesvoice'
     compileSdk 36
-    defaultConfig { applicationId 'org.tomstout.hermesvoice'; minSdk 33; targetSdk 36; versionCode 5; versionName '0.3.2'
+    defaultConfig { applicationId 'org.tomstout.hermesvoice'; minSdk 33; targetSdk 36; versionCode 6; versionName '0.4.0'
         if (ciBuild) { applicationIdSuffix '.ci'; versionNameSuffix '-ci' }
         buildConfigField 'boolean', 'CI_BUILD', ciBuild ? 'true' : 'false'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner' }
@@ -28,7 +28,7 @@ android {
     }
     buildTypes {
         debug { if (unsignedPersonalBuild) signingConfig = null }
-        release { minifyEnabled false }
+        release { minifyEnabled false; debuggable false }
     }
 }
 

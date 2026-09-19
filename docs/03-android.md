@@ -118,3 +118,15 @@ The recorder can disconnect immediately after its last acknowledgement. In that 
 Tap **Refresh status** to display the latest stored diagnostics. This button does not force a Bluetooth connection. Transfer completion now says **Saved on phone; recorder confirmed receipt** once the acknowledgement succeeds. Check the phone queue and **Last upload** separately for server delivery.
 
 Install the personal 0.3.2 APK over the existing app without uninstalling or clearing storage. The package and retained signing key are unchanged. No firmware update or new pairing is required. An old queue snapshot from an earlier app version is labelled as such until the recorder next connects.
+
+## Version 0.4.0 status and diagnostics screens
+
+The default **Status** tab shows an overall indicator and separate Recorder, Delivery and Server cards. Green means a verified good condition, yellow means waiting or a check is needed, and red identifies an actionable problem. Every indicator includes words and a symbol; meaning never depends on color alone. Recorder standby is expected between recordings and is not reported as a hardware failure. The app cannot confirm that an offline recorder is powered on.
+
+A green server card requires an authenticated health check or matching upload receipt within the previous two minutes. The app checks on foreground entry and approximately once per minute while open. Status refreshes every two seconds while visible. It does not continually poll the server in the background. Changing server settings invalidates older checks, including requests that finish after the change. Server acceptance confirms delivery; processing and Telegram replies remain separate.
+
+**Diagnostics** contains server settings, pairing, permissions, retries, held-recording review, selectable technical details and a privacy-filtered export. The server token remains hidden. Saving an empty token field preserves the existing token. Invalid settings leave the existing configuration intact. Phone queue counts come directly from SQLite; recorder counts remain labelled last known.
+
+The interface follows the phone's light/dark setting and supports enlarged text, screen rotation, system-bar/keyboard insets and scrollable content. Buttons have at least 48 dp touch targets. The two tabs retain selection across activity recreation.
+
+The personal delivery uses a non-debuggable **release** APK, signed locally with the retained installation key. Install it over the existing app without uninstalling or clearing data. The app's package, queue schema, pairing and firmware protocol remain compatible. This is a personal sideloaded release; actual locked-phone Bluetooth behavior and battery hardware still require physical acceptance testing.

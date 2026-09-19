@@ -35,6 +35,35 @@ final class Settings {
         c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit()
             .putString("recorder",text).putLong("recorder_read_at",System.currentTimeMillis()).apply();
     }
+    static void recorderUpdate(Context c,RecorderStatus status,boolean fullRead){
+        SharedPreferences.Editor edit=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit()
+            .putString("recorder",status.text()).putInt("recorder_queue",status.queued())
+            .putBoolean("recorder_queue_estimated",status.estimated())
+            .putLong("recorder_contact_at",System.currentTimeMillis());
+        if(fullRead)edit.putLong("recorder_read_at",System.currentTimeMillis());
+        if(status.info()!=null)edit.putInt("recorder_quarantined",status.info().quarantined)
+            .putLong("recorder_errors",status.info().errors);
+        edit.apply();
+    }
+    static synchronized void saveServer(Context c,String address,String secret)throws Exception{
+        Endpoint.parse(address);
+        SharedPreferences p=prefs(c);SharedPreferences.Editor edit=p.edit();
+        if(secret.isEmpty())token(c);
+        else {
+            if(secret.length()<32)throw new IllegalArgumentException("Token must contain at least 32 characters");
+            Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key());
+            edit.putString("token",Base64.encodeToString(cipher.doFinal(secret.getBytes(StandardCharsets.UTF_8)),Base64.NO_WRAP))
+                .putString("iv",Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP));
+        }
+        if(!edit.putString("endpoint",address.trim()).putLong("server_revision",p.getLong("server_revision",0)+1).commit())
+            throw new java.io.IOException("Settings could not be saved");
+    }
+    static synchronized void serverHealth(Context c,long revision,boolean ok,String message){
+        if(revision!=prefs(c).getLong("server_revision",0))return;
+        c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit()
+            .putLong("server_revision",revision).putBoolean("server_ok",ok)
+            .putLong("server_checked_at",System.currentTimeMillis()).putString("server_message",message).apply();
+    }
     static String diagnostics(Context c){
         SharedPreferences d=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE);
         StringBuilder out=new StringBuilder("Hermes Voice "+BuildConfig.VERSION_NAME+"\n");
@@ -50,6 +79,11 @@ final class Settings {
                 try{value=new java.util.Date(Long.parseLong(value)).toString();}catch(NumberFormatException ignored){}
             }
             out.append(key.replace('_',' ')).append(": ").append(value).append("\n");
+        }
+        if(d.getLong("server_revision",-1)==prefs(c).getLong("server_revision",0)){
+            long checked=d.getLong("server_checked_at",0);
+            out.append("Server check: ").append(d.getString("server_message","not checked")).append("\n");
+            if(checked>0)out.append("Server checked at: ").append(new java.util.Date(checked)).append("\n");
         }
         return out.toString();
     }

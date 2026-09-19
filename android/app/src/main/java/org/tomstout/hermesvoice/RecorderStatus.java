@@ -12,6 +12,9 @@ final class RecorderStatus {
     void acknowledged() {
         if(snapshot!=null){queued=Math.max(0,queued-1);estimated=true;}
     }
+    int queued(){return snapshot==null?-1:queued;}
+    RecorderInfo info(){return snapshot;}
+    boolean estimated(){return estimated;}
     String text() {
         if(snapshot==null)return "not available";
         // The remaining details still describe the last INFO read.

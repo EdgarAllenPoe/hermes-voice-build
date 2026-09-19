@@ -62,4 +62,25 @@ public final class RecorderStatusTest {
         assertTrue(Settings.diagnostics(context).contains("recorder: not available"));
         assertFalse(Settings.diagnostics(context).contains("Recorder queue: 0"));
     }
+    @Test public void changingSettingsInvalidatesOldHealthResults()throws Exception{
+        String secret="synthetic-private-token-for-tests-12345";
+        Settings.saveServer(context,"http://100.100.100.100:8765/v1/voice",secret);
+        long first=Settings.prefs(context).getLong("server_revision",0);
+        Settings.serverHealth(context,first,true,"Verified");
+        assertTrue(Settings.diagnostics(context).contains("Server check: Verified"));
+        Settings.saveServer(context,"http://100.100.100.101:8765/v1/voice","");
+        assertEquals(secret,Settings.token(context));
+        assertFalse(Settings.diagnostics(context).contains("Server check: Verified"));
+        Settings.serverHealth(context,first,true,"Old request");
+        assertFalse(Settings.diagnostics(context).contains("Old request"));
+    }
+    @Test public void invalidSettingsDoNotReplaceWorkingSettings()throws Exception{
+        Settings.saveServer(context,"http://100.100.100.100:8765/v1/voice","synthetic-private-token-for-tests-12345");
+        String endpoint=Settings.endpoint(context),secret=Settings.token(context);
+        long revision=Settings.prefs(context).getLong("server_revision",0);
+        try{Settings.saveServer(context,"http://100.100.100.101:8765/v1/voice","short");fail("invalid token accepted");}
+        catch(IllegalArgumentException expected){}
+        assertEquals(endpoint,Settings.endpoint(context));assertEquals(secret,Settings.token(context));
+        assertEquals(revision,Settings.prefs(context).getLong("server_revision",0));
+    }
 }

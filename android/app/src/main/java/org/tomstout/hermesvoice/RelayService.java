@@ -10,6 +10,9 @@ import java.util.concurrent.*;
 
 /** GATT callbacks, spool I/O and durable receipts share one worker thread. */
 public final class RelayService extends Service {
+    private static volatile boolean running,connected;
+    static boolean isRunning(){return running;}
+    static boolean isConnected(){return running&&connected;}
     private HandlerThread thread;
     private Handler handler;
     private final ExecutorService upload=Executors.newSingleThreadExecutor();
@@ -25,7 +28,7 @@ public final class RelayService extends Service {
         catch(RuntimeException e){Settings.status(c,"Open Hermes Voice and tap Start relay");}
     }
     @Override public void onCreate(){
-        super.onCreate();
+        super.onCreate();running=true;connected=false;
         NotificationManager n=getSystemService(NotificationManager.class);
         n.createNotificationChannel(new NotificationChannel("relay","Voice recorder connection",NotificationManager.IMPORTANCE_LOW));
         PendingIntent p=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
@@ -58,7 +61,7 @@ public final class RelayService extends Service {
             }
             public void acknowledged(){
                 recorderStatus.acknowledged();
-                Settings.metric(RelayService.this,"recorder",recorderStatus.text());
+                Settings.recorderUpdate(RelayService.this,recorderStatus,false);
                 Settings.metric(RelayService.this,"transfer","Saved on phone; recorder confirmed receipt");
             }
             public void refreshInfo(){
@@ -97,6 +100,7 @@ public final class RelayService extends Service {
         }catch(SecurityException e){fail("Bluetooth permission was revoked");}catch(Exception e){fail("Bluetooth unavailable");}
     }
     private void closeConnection(){
+        connected=false;
         try{engine.disconnected();}catch(IOException e){Settings.metric(this,"recorder_problem","spool_sync_failed");}
         ctrl=meta=data=info=null;
         if(gatt!=null){try{gatt.disconnect();gatt.close();}catch(SecurityException ignored){}catch(RuntimeException ignored){}gatt=null;}
@@ -147,6 +151,8 @@ public final class RelayService extends Service {
             ctrl=service.getCharacteristic(Wire.CONTROL);meta=service.getCharacteristic(Wire.META);
             data=service.getCharacteristic(Wire.DATA);info=service.getCharacteristic(Wire.INFO);
             if(ctrl==null||meta==null||data==null){fail("Recorder protocol mismatch");return;}
+            connected=true;
+            getSharedPreferences("diagnostics",MODE_PRIVATE).edit().putLong("recorder_contact_at",System.currentTimeMillis()).apply();
             Settings.metric(RelayService.this,"connection","Connected");
             if(info!=null)read(info);else startTransfer(false);
         });}
@@ -164,7 +170,7 @@ public final class RelayService extends Service {
                     if(c.getUuid().equals(Wire.INFO)){
                         RecorderInfo diagnostic=new RecorderInfo(bytes);
                         recorderStatus.update(diagnostic);
-                        Settings.recorderSnapshot(RelayService.this,recorderStatus.text());
+                        Settings.recorderUpdate(RelayService.this,recorderStatus,true);
                         if(engine.awaitingInfo())engine.infoRead();else startTransfer(diagnostic.skip);
                     }else engine.read(c.getUuid().equals(Wire.META),bytes);
                 }catch(Exception e){fail("Recording validation or local storage failed");}
@@ -172,7 +178,7 @@ public final class RelayService extends Service {
         }
     };
     @Override public void onDestroy(){
-        destroyed=true;
+        destroyed=true;running=false;connected=false;
         handler.removeCallbacksAndMessages(null);
         handler.post(()->{closeConnection();thread.quitSafely();});
         upload.shutdownNow();super.onDestroy();

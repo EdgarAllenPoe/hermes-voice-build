@@ -9,6 +9,7 @@ final class Uploader {
     private static final AtomicBoolean busy=new AtomicBoolean(false);
     static void drain(Context ctx){
         if(!Settings.enabled(ctx)||!busy.compareAndSet(false,true))return;
+        long revision=Settings.prefs(ctx).getLong("server_revision",0);
         try(QueueDb db=new QueueDb(ctx)){
             URL endpoint=Endpoint.parse(Settings.endpoint(ctx));String token=Settings.token(ctx);
             if(endpoint.getProtocol().equals("http")&&!Endpoint.tailInterfacePresent())
@@ -27,6 +28,8 @@ final class Uploader {
                     UploadPolicy.Action action=UploadPolicy.action(code);
                     if(action!=UploadPolicy.Action.ACCEPT){
                         db.failed(m,"HTTP "+code,action==UploadPolicy.Action.HOLD);
+                        Settings.serverHealth(ctx,revision,false,code==401||code==403?
+                            "The server rejected the access token. Update it in Diagnostics.":"The server returned HTTP "+code+".");
                         Settings.status(ctx,action==UploadPolicy.Action.HOLD?
                             "One recording held for review; uploading others":"Upload delayed: HTTP "+code);
                         if(action==UploadPolicy.Action.HOLD)continue;
@@ -38,14 +41,19 @@ final class Uploader {
                     if(!ack.optBoolean("accepted",false)||!m.id().equals(ack.optString("id"))||!m.sha().equals(ack.optString("sha256")))
                         throw new IOException("Acknowledgement mismatch");
                     db.sent(m.id());Feedback.accepted(ctx);
+                    Settings.serverHealth(ctx,revision,true,"Recording receipt verified by the server.");
                     Settings.metric(ctx,"last_upload",Long.toString(System.currentTimeMillis()));
                     Settings.status(ctx,"Recording accepted by Hermes computer");
                 }catch(Exception e){
                     db.failed(m,"Network or acknowledgement failure",false);
+                    Settings.serverHealth(ctx,revision,false,"Delivery could not be verified. Check Tailscale and the server.");
                     Settings.status(ctx,"Upload delayed; recording retained");break;
                 }finally{if(conn!=null)conn.disconnect();}
             }
-        }catch(Exception e){Settings.status(ctx,"Check server settings, token, and Tailscale; recordings retained");}
+        }catch(Exception e){
+            Settings.serverHealth(ctx,revision,false,"Check server settings, token and Tailscale.");
+            Settings.status(ctx,"Check server settings, token, and Tailscale; recordings retained");
+        }
         finally{busy.set(false);}
     }
 }

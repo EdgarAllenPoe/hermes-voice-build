@@ -63,6 +63,20 @@ final class QueueDb extends SQLiteOpenHelper {
     synchronized void retryHeld(){
         getWritableDatabase().execSQL("UPDATE messages SET state='pending',next_try=0 WHERE state='held'");
     }
+    record Stats(int pending,int held,int sent) {}
+    synchronized Stats stats(){
+        int pending=0,held=0,sent=0;
+        try(Cursor r=getReadableDatabase().rawQuery("SELECT state,COUNT(*) FROM messages GROUP BY state",null)){
+            while(r.moveToNext()){
+                switch(r.getString(0)){
+                    case "pending" -> pending=r.getInt(1);
+                    case "held" -> held=r.getInt(1);
+                    case "sent" -> sent=r.getInt(1);
+                }
+            }
+        }
+        return new Stats(pending,held,sent);
+    }
     synchronized String summary(){
         StringBuilder s=new StringBuilder();
         try(Cursor r=getReadableDatabase().rawQuery("SELECT state,COUNT(*) FROM messages GROUP BY state",null)){
