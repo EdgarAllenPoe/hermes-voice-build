@@ -106,3 +106,9 @@ A committed file that fails the phone's checksum is not acknowledged. Version 0.
 The application explicitly enables the vendor `vsys_3v3` regulator and allows 20 ms settling before BLE initialization, following the manufacturer board example [S3]. The microphone rail is managed separately. If the selected board package lacks either node label, reconcile that board-support integration rather than commenting out the checks.
 
 Version 0.3 moves button timing to button.c, validates committed CRCs on boot, and reports quarantined slots through INFO. Guide 10 describes non-destructive SKIP and the new counters.
+
+## Dedicated charging light
+
+Firmware 0.3.3 enables the separate red D2 LED on nPM1300 LEDDRV1. It samples charging current and USB/battery status about once per second, including during recording. Steady red means charging current is at least 10 mA; off means no qualifying charging current or an unavailable/faulted sample. At the normal end of charging it goes out. An off light by itself does not distinguish full from disconnected USB/battery or a charging fault.
+
+This light is independent of the recorder's green/blue/red RGB status light. The existing 100 mA / 4.20 V profile, pairing identity and recording behavior remain intact. See [charging indication](16-charging-indicator.md) for the implementation and checks.

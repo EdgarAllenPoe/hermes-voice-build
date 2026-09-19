@@ -2,6 +2,9 @@
 #include "hvb.h"
 #include "codec.h"
 #include "button.h"
+#include "charge_indicator.h"
+#include <zephyr/drivers/led.h>
+#include <zephyr/drivers/sensor/npm13xx_charger.h>
 #include <zephyr/device.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/drivers/gpio.h>
@@ -19,6 +22,9 @@ static const struct device *const mic=DEVICE_DT_GET(DT_NODELABEL(pdm20));
 static const struct device *const main_power=DEVICE_DT_GET(DT_NODELABEL(vsys_3v3));
 static const struct device *const rail=DEVICE_DT_GET(DT_NODELABEL(dmic_vdd));
 static const struct device *const charger=DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(nordic_npm1300_charger));
+static const struct device *const charge_led=DEVICE_DT_GET(DT_NODELABEL(pmic_leds));
+static atomic_t charge_indicator_on,charge_indicator_error,charge_indicator_samples;
+static bool charge_led_known;
 static struct gpio_callback ext_cb,int_cb;
 struct edge {int64_t at;bool down;};
 K_MSGQ_DEFINE(edges,sizeof(struct edge),16,4);
@@ -60,15 +66,35 @@ static void stop_mic(void){
     regulator_disable(rail);mic_on=false;atomic_clear(&hvb_recording);
 }
 static int add_frame(int slot,const int16_t *pcm){uint8_t encoded[164];hvb_encode_frame(pcm,encoded);return hvb_store_append(slot,encoded);}
+static void update_charge_indicator(void){
+    struct sensor_value v={0},i={0},bus={0},status={0},error={0};
+    int rc=device_is_ready(charger)?sensor_sample_fetch(charger):-ENODEV;
+    if(!rc)rc=sensor_channel_get(charger,SENSOR_CHAN_GAUGE_VOLTAGE,&v);
+    if(!rc)atomic_set(&battery,(uint16_t)sensor_value_to_milli(&v));
+    if(!rc)rc=sensor_channel_get(charger,SENSOR_CHAN_GAUGE_AVG_CURRENT,&i);
+    if(!rc)rc=sensor_channel_get(charger,(enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_VBUS_STATUS,&bus);
+    if(!rc)rc=sensor_channel_get(charger,(enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_STATUS,&status);
+    if(!rc)rc=sensor_channel_get(charger,(enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_ERROR,&error);
+    bool on=hvb_charge_indicator(rc==0,(uint8_t)bus.val1,(int32_t)sensor_value_to_milli(&v),
+                                 sensor_value_to_micro(&i),(uint8_t)status.val1,(uint8_t)error.val1,
+                                 DT_PROP(DT_COMPAT_GET_ANY_STATUS_OKAY(nordic_npm1300_charger),current_microamp));
+    if(!rc)atomic_inc(&charge_indicator_samples);
+    if(!device_is_ready(charge_led)){
+        charge_led_known=false;rc=-ENODEV;
+    }else if(!charge_led_known||on!=(bool)atomic_get(&charge_indicator_on)){
+        int led_rc=on?led_on(charge_led,1):led_off(charge_led,1);
+        if(led_rc){charge_led_known=false;rc=led_rc;}
+        else{charge_led_known=true;atomic_set(&charge_indicator_on,on);}
+    }
+    atomic_set(&charge_indicator_error,rc);
+}
 static void background(void *a,void *b,void *c){
     ARG_UNUSED(a);ARG_UNUSED(b);ARG_UNUSED(c);unsigned ticks=0;
     while(true){
         hvb_ble_maintenance();hvb_store_gc_step();
-        if(++ticks%100==0&&!atomic_get(&hvb_recording)&&device_is_ready(charger)){
-            struct sensor_value v;
-            if(!sensor_sample_fetch(charger)&&!sensor_channel_get(charger,SENSOR_CHAN_GAUGE_VOLTAGE,&v))
-                atomic_set(&battery,(uint16_t)(v.val1*1000+v.val2/1000));
-        }
+        /* Low-priority sampling keeps the indicator current even during capture.
+         * Only this thread accesses charger samples; audio remains on main. */
+        if(ticks++%10==0)update_charge_indicator();
         k_msleep(100);
     }
 }

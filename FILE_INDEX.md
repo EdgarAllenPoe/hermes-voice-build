@@ -83,8 +83,10 @@
 - docs/13-server-commissioning.md
 - docs/14-microphone-commissioning.md
 - docs/15-single-press-recording.md
+- docs/16-charging-indicator.md
 - docs/HARDWARE-GUIDE.md
 - docs/Hermes-Voice-Hardware-Guide-0.3.2.docx
+- docs/Hermes-Voice-Hardware-Guide-0.3.3.docx
 - docs/Hermes-Voice-Hardware-Guide.docx
 - docs/hardware-guide.json
 - docs/host-tests.txt
@@ -95,6 +97,8 @@
 - firmware/src/ble.c
 - firmware/src/button.c
 - firmware/src/button.h
+- firmware/src/charge_indicator.c
+- firmware/src/charge_indicator.h
 - firmware/src/codec.c
 - firmware/src/codec.h
 - firmware/src/device_config.example.h
@@ -139,6 +143,7 @@
 - tests/test_audio.py
 - tests/test_build_package.py
 - tests/test_button.py
+- tests/test_charge_indicator.py
 - tests/test_dashboard.py
 - tests/test_firmware_nvs.py
 - tests/test_flash_prebuilt.py

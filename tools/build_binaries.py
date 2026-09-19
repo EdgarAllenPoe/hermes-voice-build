@@ -19,7 +19,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BOARD = 'seeed-xiao-nrf54lm20a'
-FIRMWARE_VERSION = '0.3.2'
+FIRMWARE_VERSION = '0.3.3'
 
 def android_version() -> str:
     text = (ROOT / 'android/app/build.gradle').read_text(encoding='utf-8')

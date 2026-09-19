@@ -23,3 +23,7 @@ Added a host-tested Android transfer controller with worker-thread I/O, queue sc
 ## Firmware 0.3.2 single press recording
 
 A short press and release starts recording. Microphone warmup begins on press; stable release confirms the capture and green LED. Pairing still uses a 1.5-second idle hold, and bond reset a 10-second idle hold. Holding a manual-stop press cannot accidentally pair or forget. Release debounce tolerates mechanical switch bounce, including events queued during microphone warmup. Speech now ends after two seconds of silence instead of 1.2 seconds. Speech sensitivity, five-second no-speech cancellation, 60-second limit, BLE protocol, pairing identity and storage layout are unchanged.
+
+## Firmware 0.3.3 charging indicator
+
+Enabled the nPM1300 LED driver and the separate red LEDDRV1 charging light. A low-priority task samples USB status, cell voltage and charging current about once per second, including during recording. Following Seeed's XIAO example, the indication uses current rather than the D00 COMPLETE flag. Read errors, charger faults, thermal pause and invalid USB conditions turn the indication off. Charging limits remain 100 mA / 4.20 V. Eight native C policy tests cover measured charging, taper, completion, absent power/cell, faults and current thresholds. Updated the printable workshop guide.

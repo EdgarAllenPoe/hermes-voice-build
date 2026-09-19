@@ -27,4 +27,10 @@
 &uart20 { status = "disabled"; };
 /* Review the generated charger settings with tools/check_firmware_dts.py
  * and complete the hardware commissioning checklist BEFORE attaching a cell. */
+/* Dedicated red D2 charge LED, independent of the GPIO RGB recorder LED.
+ * Seeed's XIAO example uses measured current instead of D00 COMPLETE. */
+&pmic_leds {
+    status = "okay";
+    nordic,led1-mode = "host";
+};
 #include "charger.overlay"

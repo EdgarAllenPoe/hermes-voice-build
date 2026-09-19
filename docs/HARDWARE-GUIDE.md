@@ -1,12 +1,12 @@
 # Hermes Voice hardware workshop guide
 
-Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Controls updated for firmware 0.3.2 | September 19 2026.
+Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Controls and charging LED updated for firmware 0.3.3 | September 19 2026.
 
 Use this guide at the workbench when your hardware arrives. Work through the stages in order and record the results. Begin with USB power and the battery disconnected. Successful compilation is preparation for these tests; it does not establish physical operation.
 
 ## Choose the correct software
 
-Use personal Android 0.4.0 and recorder firmware 0.3.2 for the current controls. Earlier binaries remain for reference. Single tap replaces double click, and silence saving now waits two seconds. If the installed app still shows a double-press tip, follow this guide. A CI app uses a separate identity.
+Use personal Android 0.4.0 and recorder firmware 0.3.3. Tap once to record; two seconds of silence saves. The separate red LED now shows charging. If the phone still shows a double-press tip, follow this guide. A CI app uses a separate identity.
 
 | Page | Workshop stage |
 | --- | --- |
@@ -36,7 +36,7 @@ Keep the private pairing card and signing-key backup secure. This guide contains
 
 # Parts and wiring
 
-Use the Sense board, a normally open momentary switch, the supplied antenna, a USB-C data cable, insulated wire, and a mating battery lead. The planned cell is the protected Adafruit 4237 3.7 V 350 mAh LiPo. Confirm the actual delivered labels and specifications before connecting it. [1, 3]
+Use the Sense board, a normally open momentary switch, the supplied antenna, a USB-C data cable and insulated wire. The installed battery is labelled PKCELL LP552035, 3.7 V, 350 mAh. Confirm its protection and supplier charge limits; the earlier parts list proposed Adafruit 4237. [1, 3]
 
 ![Logical wiring: normally open switch connects D0 to GND; protected battery positive connects to BAT plus and negative to BAT minus; antenna and USB use their dedicated connectors.](wiring-diagram.png)
 
@@ -223,7 +223,7 @@ Chosen endpoint: ________________________________________________________
 5. On the Status tab, tap Check connection. Expect Server reachable and token accepted. This sends a health check and does not invoke Hermes. Fix the endpoint, token or Tailscale connection before continuing.
 6. Power the recorder from USB with its antenna attached and the battery disconnected. Hold its capture button for about 1.5 seconds, then release; this opens a 60-second pairing window.
 7. On the Diagnostics tab, tap Pair recorder and select the recorder. Complete Android's association prompt and the separate Bluetooth pairing prompt using the matching private pairing card.
-8. Tap Start relay. Open Diagnostics to inspect recorder information. The current firmware should report version 0.3.2 when it connects.
+8. Tap Start relay. Open Diagnostics to inspect recorder information. The current firmware should report version 0.3.3 when it connects.
 9. Unlock once after a phone reboot. Keep Bluetooth and Tailscale enabled. If you explicitly Force stop the app, reopen it and start the relay again; the app cannot bypass Android's force-stop rules.
 
 ## Recorder controls
@@ -314,12 +314,12 @@ Locked-phone result and recovery notes: ____________________________________
 
 # Commission the battery and enclosure
 
-Complete USB-only capture and transfer testing first. Before attaching a cell, verify that the selected bundle's generated DTS/Kconfig checks passed for 100 mA charging and 4.20 V termination. These are configuration values; the following supervised measurements establish physical behavior. [2, 3]
+Firmware 0.3.3: the separate red charging LED lights while USB supplies measurable charging current. It goes out as charging stops or tapers below 10 mA. Off can also mean no USB, no battery, a fault or a failed reading; it alone does not prove a full battery. Recording still uses the separate RGB LED.
 
-1. Confirm a protected ordinary 1S 3.7 V LiPo, the intended capacity and the supplier's charge limits. Do not substitute a 4.35 V high-voltage cell, LiFePO4, multi-cell pack or unprotected cell.
+1. Confirm the actual cell type, protection and supplier limits. The firmware retains 100 mA charging and 4.20 V termination for ordinary 1S 3.7 V LiPo. Do not substitute another chemistry or voltage.
 2. With USB removed, verify connector polarity again and connect the cell through the insulated mating lead. Keep the enclosure open and the pouch free of pressure or sharp edges.
 3. Check battery-only startup, idle, capture and BLE transfer. If operation is unstable, disconnect safely and investigate before charging.
-4. For charging, use a suitable inline instrument in the battery lead. A USB input meter also measures board power and does not by itself show cell charging current.
+4. The PMIC reported about 4.02 V and 104 mA charging on September 19, 2026, with no charger error. A full charge cycle and battery-only operation still need verification.
 5. Use the meter's correct fused current input and range. Never place a meter in current mode directly across a battery. If unfamiliar with current measurement, get experienced help with the instrument setup.
 6. Connect USB and supervise the charge. Measure cell current and voltage; check taper and termination against the cell specification. Stop on swelling, odor, unusual heat or unexpected readings.
 7. Test ordinary USB insertion/removal after stable operation. Do not deliberately deep-discharge, short or overcharge the cell.
@@ -342,7 +342,7 @@ The referenced board schematic uses a fixed NTC resistor and the selected cell h
 | Symptom | Check first | Preserve |
 | --- | --- | --- |
 | Board not recognized | USB data cable, exact board, normal CMSIS-DAP driver setup | Do not substitute a target or auto-erase |
-| Red recorder LED | Free slots, microphone/audio counters, flash errors | Keep wanted recordings before recovery |
+| Red light | Separate charge LED: charging. RGB red: inspect capture or flash errors. | Off charge LED alone cannot prove full |
 | Cannot pair | 1.5-second hold and release, 60-second window, correct card | Pairing passkey is not server token |
 | Phone cannot upload | Test server connection, Tailscale, URL/token | Pending audio stays on phone |
 | Held phone messages | HTTP reason and server configuration; use Review held uploads | Held audio remains until accepted |
