@@ -18,6 +18,7 @@ public final class RelayService extends Service {
     private volatile boolean destroyed;
     private long deadline,lastProgress;
     private TransferEngine engine;
+    private final RecorderStatus recorderStatus=new RecorderStatus();
     static void start(Context c){
         if(!Settings.enabled(c))return;
         try{c.startForegroundService(new Intent(c,RelayService.class));}
@@ -54,6 +55,14 @@ public final class RelayService extends Service {
                 if(fresh)Feedback.received(RelayService.this);
                 Settings.status(RelayService.this,"Recording safely saved on phone");
                 if(!destroyed){upload.submit(()->Uploader.drain(RelayService.this));UploadJob.schedule(RelayService.this);}
+            }
+            public void acknowledged(){
+                recorderStatus.acknowledged();
+                Settings.metric(RelayService.this,"recorder",recorderStatus.text());
+                Settings.metric(RelayService.this,"transfer","Saved on phone; recorder confirmed receipt");
+            }
+            public void refreshInfo(){
+                if(info!=null)RelayService.this.read(info);else engine.infoRead();
             }
             public void problem(String code){
                 Settings.metric(RelayService.this,"recorder_problem",code);
@@ -154,7 +163,9 @@ public final class RelayService extends Service {
                 try{
                     if(c.getUuid().equals(Wire.INFO)){
                         RecorderInfo diagnostic=new RecorderInfo(bytes);
-                        Settings.metric(RelayService.this,"recorder",diagnostic.text);startTransfer(diagnostic.skip);
+                        recorderStatus.update(diagnostic);
+                        Settings.recorderSnapshot(RelayService.this,recorderStatus.text());
+                        if(engine.awaitingInfo())engine.infoRead();else startTransfer(diagnostic.skip);
                     }else engine.read(c.getUuid().equals(Wire.META),bytes);
                 }catch(Exception e){fail("Recording validation or local storage failed");}
             });

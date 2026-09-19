@@ -32,22 +32,22 @@ jobs:
           set -euo pipefail
           .tools/gradle-8.11.1/bin/gradle -p android --no-daemon :app:assembleDebug :app:lintDebug
           mkdir -p publish/personal-unsigned
-          cp android/app/build/outputs/apk/debug/app-debug-unsigned.apk publish/personal-unsigned/Hermes-Voice-0.3.1-UNSIGNED.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging publish/personal-unsigned/Hermes-Voice-0.3.1-UNSIGNED.apk > publish/personal-unsigned/apk-badging.txt
+          cp android/app/build/outputs/apk/debug/app-debug-unsigned.apk publish/personal-unsigned/Hermes-Voice-0.3.2-UNSIGNED.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging publish/personal-unsigned/Hermes-Voice-0.3.2-UNSIGNED.apk > publish/personal-unsigned/apk-badging.txt
           python - <<'PY'
           import hashlib,json,os
           from pathlib import Path
           from tools.build_binaries import verify_apk_structure
           out=Path('publish/personal-unsigned')
-          apk=out/'Hermes-Voice-0.3.1-UNSIGNED.apk'
+          apk=out/'Hermes-Voice-0.3.2-UNSIGNED.apk'
           verify_apk_structure(apk)
           text=(out/'apk-badging.txt').read_text()
           print(text)
-          assert "package: name='org.tomstout.hermesvoice' versionCode='4' versionName='0.3.1'" in text
+          assert "package: name='org.tomstout.hermesvoice' versionCode='5' versionName='0.3.2'" in text
           assert "minSdkVersion:'33'" in text and "targetSdkVersion:'36'" in text
           (out/'build-result.json').write_text(json.dumps({
               'source_commit':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],
-              'version':'0.3.1','package':'org.tomstout.hermesvoice',
+              'version':'0.3.2','package':'org.tomstout.hermesvoice',
               'compiled':True,'signed':False,'installable':False,'hardware_tested':False,
               'instruction':'Sign locally with the retained personal key before installation.'
           },indent=2)+'\n')

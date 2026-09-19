@@ -34,6 +34,7 @@
 - android/app/build.gradle
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/PairingAddressTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/QueueDbTest.java
+- android/app/src/androidTest/java/org/tomstout/hermesvoice/RecorderStatusTest.java
 - android/app/src/main/AndroidManifest.xml
 - android/app/src/main/java/org/tomstout/hermesvoice/BootReceiver.java
 - android/app/src/main/java/org/tomstout/hermesvoice/CompanionService.java
@@ -42,6 +43,7 @@
 - android/app/src/main/java/org/tomstout/hermesvoice/MainActivity.java
 - android/app/src/main/java/org/tomstout/hermesvoice/QueueDb.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RecorderInfo.java
+- android/app/src/main/java/org/tomstout/hermesvoice/RecorderStatus.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RelayService.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Settings.java
 - android/app/src/main/java/org/tomstout/hermesvoice/TransferEngine.java

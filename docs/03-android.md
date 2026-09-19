@@ -108,3 +108,13 @@ Install the personal 0.3.1 APK as an update over 0.3.0; do not uninstall or clea
 The emulator regression uses the actual Android MacAddress and BluetoothAdapter classes to reproduce the failure and verify the corrected handoff. Further cases cover invalid input, already-valid addresses, saved-address repair, and an unpaired installation. Physical phone pairing still requires confirmation on the user's device.
 
 Android API contract: https://developer.android.com/reference/android/bluetooth/BluetoothAdapter#getRemoteDevice(java.lang.String)
+
+## Version 0.3.2 recorder queue display
+
+The recorder queue now decreases only after the recorder confirms a transfer acknowledgement. Saving on the phone or receiving a server receipt alone does not change this count. The relay then reads fresh recorder status before requesting the next recording, so recordings added during delivery are included.
+
+The recorder can disconnect immediately after its last acknowledgement. In that case the app retains an estimated remaining count (normally zero) instead of the old pre-transfer count. Recorder status is labelled **last known**, and the last full status read is dated. A lost acknowledgement response keeps the previous count until reconnection; it does not falsely claim deletion. Skipped corrupt recordings still occupy their recorder slots and remain counted.
+
+Tap **Refresh status** to display the latest stored diagnostics. This button does not force a Bluetooth connection. Transfer completion now says **Saved on phone; recorder confirmed receipt** once the acknowledgement succeeds. Check the phone queue and **Last upload** separately for server delivery.
+
+Install the personal 0.3.2 APK over the existing app without uninstalling or clearing storage. The package and retained signing key are unchanged. No firmware update or new pairing is required. An old queue snapshot from an earlier app version is labelled as such until the recorder next connects.

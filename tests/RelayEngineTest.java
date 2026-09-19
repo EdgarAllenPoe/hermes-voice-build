@@ -23,7 +23,12 @@ public final class RelayEngineTest {
         final Set<String> skipped=new HashSet<>();
         final ArrayDeque<Runnable> events=new ArrayDeque<>();
         TransferEngine engine;
-        byte[] selected;int at,acks,saves,steps;boolean failCommit,lostAck,failRead,invalidChunk,skip=true;
+        final RecorderStatus status=new RecorderStatus();
+        final List<String> confirmedCounts=new ArrayList<>();
+        byte[] selected;int at,acks,saves,steps,statusReads;
+        boolean failCommit,lostAck,failRead,invalidChunk,skip=true,disconnectAfterAck,recordDuringAck,noInfo;
+        String afterAck;
+
         Exception error;
         Sim() throws IOException {newEngine();}
         void newEngine(){
@@ -34,7 +39,11 @@ public final class RelayEngineTest {
                 inbox.put(id,bytes);return previous==null;
             },this);
         }
-        void start() throws Exception {error=null;skipped.clear();engine.connected(skip);pump();}
+        void snapshot(){
+            byte[] info=new byte[]{1,0,(byte)recordings.size(),0,0,0,0,0};
+            status.update(new RecorderInfo(info));statusReads++;
+        }
+        void start() throws Exception {error=null;skipped.clear();if(!noInfo)snapshot();engine.connected(skip);pump();}
         interface Op {void run()throws Exception;}
         void enqueue(Op op){events.add(()->{try{op.run();}catch(Exception e){error=e;events.clear();try{engine.disconnected();}catch(Exception ignored){}}});}
         void pump(){while(!events.isEmpty()){require(++steps<10000,"loop");events.remove().run();}}
@@ -47,6 +56,7 @@ public final class RelayEngineTest {
                         String id=Wire.id(b,1);require(inbox.containsKey(id),"ACK before durable acceptance");
                         acks++;if(lostAck){lostAck=false;throw new IOException("ACK response lost");}
                         recordings.remove(selected);
+                        if(recordDuringAck){recordDuringAck=false;recordings.add(audio(99,3));}
                     }
                     case 4 -> {skipped.add(Wire.id(b,1));require(recordings.contains(selected),"skip deleted data");}
                     default -> throw new AssertionError("unknown control");
@@ -70,6 +80,16 @@ public final class RelayEngineTest {
         public void idle(){}
         public void progress(int n,int total){require(n<=total,"progress overflow");}
         public void saved(boolean fresh){if(fresh)saves++;}
+        public void acknowledged(){
+            status.acknowledged();afterAck=status.text();confirmedCounts.add(afterAck);
+        }
+        public void refreshInfo(){
+            enqueue(()->{
+                if(disconnectAfterAck&&recordings.isEmpty())throw new IOException("Idle recorder disconnected");
+                if(!noInfo)snapshot();
+                engine.infoRead();
+            });
+        }
         public void problem(String code){require(code.equals("corrupt_recording_skipped"),"unexpected problem");}
         public void close()throws Exception{
             engine.disconnected();
@@ -83,24 +103,28 @@ public final class RelayEngineTest {
         try(Sim s=new Sim()){
             s.recordings.add(audio(2,20));s.failRead=true;s.start();
             require(s.error!=null&&s.acks==0&&s.recordings.size()==1,"interrupted transfer retained");
+            require(s.status.text().startsWith("Recorder queue: 1\n")&&s.confirmedCounts.isEmpty(),"interruption does not decrement queue");
             Path p=s.root.resolve(Wire.id(s.recordings.get(0),24)+".part");require(Files.size(p)==180,"partial persisted");
             s.newEngine();s.start();require(s.acks==1&&s.inbox.size()==1,"process restart resumes");cases++;
         }
         try(Sim s=new Sim()){
             s.recordings.add(audio(3,3));s.failCommit=true;s.start();
             require(s.acks==0&&s.inbox.isEmpty()&&s.recordings.size()==1,"disk full not ACKed");
+            require(s.status.text().startsWith("Recorder queue: 1\n")&&s.confirmedCounts.isEmpty(),"failed save does not decrement queue");
             s.failCommit=false;s.start();require(s.acks==1,"retry disk full");cases++;
         }
         try(Sim s=new Sim()){
             s.recordings.add(audio(4,3));s.lostAck=true;s.start();
             require(s.inbox.size()==1&&s.recordings.size()==1,"lost ACK retained");
+            require(s.status.text().startsWith("Recorder queue: 1\n")&&s.confirmedCounts.isEmpty(),"lost ACK response does not claim recorder removal");
             s.start();require(s.saves==1&&s.acks==2&&s.recordings.isEmpty(),"duplicate safe ACK");cases++;
         }
         try(Sim s=new Sim()){
             byte[] corrupt=audio(5,3);corrupt[64]^=1;s.recordings.add(corrupt);s.recordings.add(audio(6,3));
             s.start();s.start();s.start();
             require(s.inbox.size()==1&&s.acks==1&&s.recordings.size()==1,"corrupt skipped without deletion");
-            require(Files.exists(s.root.resolve(Wire.id(corrupt,24)+".bad")),"bad bytes preserved");cases++;
+            require(Files.exists(s.root.resolve(Wire.id(corrupt,24)+".bad")),"bad bytes preserved");
+            require(s.status.text().startsWith("Recorder queue: 1\n"),"idle after SKIP does not claim empty queue");cases++;
         }
         try(Sim s=new Sim()){
             byte[] corrupt=audio(7,3);corrupt[64]^=1;s.recordings.add(corrupt);s.skip=false;
@@ -121,7 +145,9 @@ public final class RelayEngineTest {
         }
         try(Sim s=new Sim()){
             for(int i=0;i<15;i++)s.recordings.add(audio(20+i,3));
-            s.start();require(s.acks==15&&s.inbox.size()==15,"full recorder queue");cases++;
+            s.start();require(s.acks==15&&s.inbox.size()==15,"full recorder queue");
+            require(s.status.text().startsWith("Recorder queue: 0\n")&&s.statusReads==16,"refresh after every ACK");
+            for(int i=0;i<15;i++)require(s.confirmedCounts.get(i).startsWith("Recorder queue: "+(14-i)+" (estimated"),"remaining queue decreases after ACK");cases++;
         }
         try(Sim s=new Sim()){
             s.recordings.add(audio(40,3000));s.start();require(s.acks==1,"60 second maximum recording");cases++;
@@ -129,6 +155,22 @@ public final class RelayEngineTest {
         try(Sim s=new Sim()){
             boolean rejected=false;try{s.engine.written();}catch(IOException expected){rejected=true;}
             require(rejected,"out of order callback rejected");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.recordings.add(audio(50,3));s.disconnectAfterAck=true;s.start();
+            require(s.error!=null&&s.recordings.isEmpty()&&s.inbox.size()==1,"final ACK followed by disconnect");
+            require(s.status.text().startsWith("Recorder queue: 0 (estimated"),"last transfer does not leave stale one");
+            s.disconnectAfterAck=false;s.start();
+            require(s.status.text().startsWith("Recorder queue: 0\n"),"reconnection replaces estimate");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.recordings.add(audio(51,3));s.recordDuringAck=true;s.start();
+            require(s.acks==2&&s.inbox.size()==2&&s.statusReads==3,"new recording discovered by fresh INFO");
+            require(s.status.text().startsWith("Recorder queue: 0\n"),"concurrent new recording drained");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.recordings.add(audio(52,3));s.noInfo=true;s.start();
+            require(s.acks==1&&s.status.text().equals("not available"),"missing INFO does not block transfer or invent queue");cases++;
         }
         for(int code:new int[]{400,409,413,415})require(UploadPolicy.action(code)==UploadPolicy.Action.HOLD,"hold "+code);
         for(int code:new int[]{401,403,404,411})require(UploadPolicy.action(code)==UploadPolicy.Action.CONFIGURATION,"config "+code);

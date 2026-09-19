@@ -14,10 +14,12 @@ final class TransferEngine {
         void idle();
         void progress(int received,int total);
         void saved(boolean fresh);
+        void acknowledged();
+        void refreshInfo();
         void problem(String code);
     }
     interface Inbox { boolean accept(byte[] bytes) throws Exception; }
-    enum State { IDLE,NEXT,META,OFFSET,DATA,ACK,SKIP }
+    enum State { IDLE,NEXT,META,OFFSET,DATA,ACK,INFO,SKIP }
     private final Port port;
     private final Inbox inbox;
     private final File directory;
@@ -36,13 +38,22 @@ final class TransferEngine {
     }
     void next() { state=State.NEXT;port.write(new byte[]{1}); }
     void disconnected() throws IOException { state=State.IDLE;close(); }
+    boolean awaitingInfo() { return state==State.INFO; }
+    void infoRead() {
+        if(state!=State.INFO)throw new IllegalStateException("Unexpected recorder status");
+        next();
+    }
     void written() throws Exception {
         switch(state) {
             case NEXT -> {state=State.META;port.read(true);}
             case OFFSET -> {state=State.DATA;port.read(false);}
             case ACK -> {
+                // A saved phone copy is not enough: wait for the recorder's ACK response.
+                state=State.INFO;port.acknowledged();
                 if(partFile!=null)Files.deleteIfExists(partFile.toPath());
-                partFile=null;corruptAttempts.remove(id);next();
+                partFile=null;corruptAttempts.remove(id);
+                // The last ACK may make the recorder disconnect before this read.
+                port.refreshInfo();
             }
             case SKIP -> next();
             default -> throw new IOException("Unexpected Bluetooth write response");

@@ -31,11 +31,21 @@ final class Settings {
     static void metric(Context c,String key,String value){
         c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit().putString(key,value).apply();
     }
+    static void recorderSnapshot(Context c,String text){
+        c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE).edit()
+            .putString("recorder",text).putLong("recorder_read_at",System.currentTimeMillis()).apply();
+    }
     static String diagnostics(Context c){
         SharedPreferences d=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE);
         StringBuilder out=new StringBuilder("Hermes Voice "+BuildConfig.VERSION_NAME+"\n");
         for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload"}){
             String value=d.getString(key,"not available");
+            if(key.equals("recorder")&&!value.equals("not available")){
+                long readAt=d.getLong("recorder_read_at",0);
+                value+="\nRecorder details last read: "+
+                    (readAt==0?"unknown (older app snapshot)":new java.util.Date(readAt).toString());
+                value+="\nRecorder status: last known; updated when connected";
+            }
             if(key.equals("last_upload")&&!value.equals("not available")){
                 try{value=new java.util.Date(Long.parseLong(value)).toString();}catch(NumberFormatException ignored){}
             }
