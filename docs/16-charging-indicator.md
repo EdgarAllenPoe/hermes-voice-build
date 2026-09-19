@@ -27,3 +27,13 @@ Eight tests compile and exercise the production C indication policy, including t
 Before this update, three PMIC samples showed 4.018-4.023 V, about 104 mA charging, USB present and no charger error. This establishes charging at that time, not a completed charge cycle.
 
 After installation, visually confirm the separate red light while charging. Record a harmless phrase to check green recording indication and delivery while the charging light stays independent. Full-charge turn-off and battery-only operation remain physical acceptance checks.
+
+## Build and installation record
+
+The personal firmware was built locally and programmed on September 19, 2026. All 197,760 image bytes passed readback verification. The recorder was idle with all 15 slots free before updating. Its existing pairing card was retained and automatic mass-erase recovery was disabled.
+
+The running image initialized its background task and successfully sampled the charger 21 times before the check. The dedicated LED state was 1 (1 means on), with no sensor/LED I/O error. Microphone, audio and button-edge failure counters were zero. The final PMIC sample reported 4169 mV, 105.7 mA and charger error 0x0. Visual LED observation and a complete charge cycle are separate user-operated checks.
+
+All 60 relevant local tests passed, as did the [complete host suite](https://github.com/EdgarAllenPoe/hermes-voice-build/actions/runs/35465302236) and [independent firmware build](https://github.com/EdgarAllenPoe/hermes-voice-build/actions/runs/35465302177) for source d968a31. The generated configuration enables LED_NPM13XX and disables the unused LED_GPIO/LED_PWM drivers; the application continues to own RGB control. All 14 pages of the updated printable guide were rendered and visually reviewed.
+
+Private bundle: firmware-v0.3.3 beside source. HEX SHA-256: a51aa501a74ef1aa25808bac05015752b33c6fab1b886a023af6e8836d362a2f. Keep this image and its pairing card private.
