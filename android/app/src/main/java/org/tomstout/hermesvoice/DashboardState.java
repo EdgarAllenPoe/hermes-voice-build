@@ -20,7 +20,7 @@ final class DashboardState {
         else if(!s.paired)recorder=waitFor("Not paired yet","Pair your voice recorder in Diagnostics.");
         else if(s.quarantined>0)recorder=error("Recording needs attention",s.quarantined+" recorder slot(s) need review. Open Diagnostics.");
         else if(s.connected) {
-            String queue=s.recorderQueue<0?"Reading recorder statusâ€¦":"Last known queue: "+s.recorderQueue;
+            String queue=s.recorderQueue<0?"Reading recorder status\u2026":"Last known queue: "+s.recorderQueue;
             recorder=s.recorderQueue<0?waitFor("Reading status",queue):s.recorderErrors>0?waitFor("Check recorder",queue+". Errors were reported since its last restart."):
                 s.recorderQueue>0?waitFor("Transferring recordings",queue+". Keep the recorder nearby."):
                 good("Connected",queue+". Your recorder is within reach.");
@@ -36,14 +36,14 @@ final class DashboardState {
 
         if(!s.configured)server=waitFor("Setup needed","Add your server address and token in Diagnostics.");
         else if(s.tailRequired&&!s.tailPresent)server=waitFor("Turn on Tailscale","Open Tailscale on this phone, then check the connection.");
-        else if(s.checking)server=waitFor("Checking connection","Verifying the server and your access tokenâ€¦");
+        else if(s.checking)server=waitFor("Checking connection","Verifying the server and your access token\u2026");
         else if(s.serverAt<=0)server=waitFor("Not checked yet","Tap Check connection to verify the server and token.");
         else if(!s.serverOk)server=error("Connection needs attention",s.serverMessage.isEmpty()?
             "Check Tailscale and server settings, then try again.":s.serverMessage);
         else if(s.now<s.serverAt||s.now-s.serverAt>SERVER_FRESH_MS)server=waitFor("Check is out of date","Last verified "+ago(s.now,s.serverAt)+". Tap Check connection.");
         else server=good("Verified","Server and token verified "+ago(s.now,s.serverAt)+".");
 
-        if(!s.configured||!s.paired||!s.permissions)overall=waitFor("Letâ€™s get you connected","Open Diagnostics to finish setup. Your existing recordings stay saved.");
+        if(!s.configured||!s.paired||!s.permissions)overall=waitFor("Let\u2019s get you connected","Open Diagnostics to finish setup. Your existing recordings stay saved.");
         else if(!s.relayEnabled)overall=waitFor("Relay is paused","Resume the relay to receive and deliver recordings.");
         else if(!s.relayRunning)overall=error("Relay needs a restart","Tap Start relay to restore the phone connection.");
         else if(!s.bluetooth)overall=waitFor("Turn on Bluetooth","The phone needs Bluetooth to receive your recordings.");

@@ -1,14 +1,18 @@
 # Hermes Voice Button
 
-## Version 0.3 source
+## Current app and recorder
 
-Version 0.3 adds simulated recorder tests, a worker-thread Android relay, safe queue migration and per-message holds, firmware corruption quarantine and diagnostics, stable personal build identities, transcript review commands, fair worker scheduling, deliberate cleanup, and a speech comparison tool. Start with [the prehardware guide](docs/10-prehardware.md) and [the current test report](TEST_REPORT_v0.3.md). The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx), with a [browsable text version](docs/HARDWARE-GUIDE.md).
+Android **0.4.0** adds an accessible two-tab interface: an everyday Status screen with green/yellow/red indicators, and a Diagnostics screen for setup and troubleshooting. It follows the phone's light/dark setting, refreshes while visible, labels stale recorder readings, and requires recent evidence before showing a healthy server. The personal APK uses a non-debuggable release build and the retained signing identity. See [the Android guide](docs/03-android.md).
 
-Hardware is still on order. Software checks and successful builds do not establish microphone, Bluetooth, charging, or battery behavior. The separately delivered v0.2 binaries below are preserved and do not contain the new v0.3 behavior. The personal v0.3 APK is now built and locally signed with the retained identity; see [its verification record](APK_v0.3_VERIFIED.md). New firmware features still require a personal v0.3 firmware build.
+Firmware **0.3.1** has been flashed to the XIAO nRF54LM20A Sense and physically commissioned for microphone capture, Bluetooth transfer and server delivery. Battery-only operation and charging acceptance remain unresolved; use the board over USB with the battery disconnected until those checks are complete. See [microphone commissioning](docs/14-microphone-commissioning.md).
+
+The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide.docx), with a [browsable text version](docs/HARDWARE-GUIDE.md). Earlier version reports remain available as historical records; current app behavior is described in the Android guide.
 
 Android relay and recorder firmware for the **Seeed Studio XIAO nRF54LM20A Sense**. Not firmware for nRF54L15, nRF52840, or nRF54LM20B.
 
 ## Original v0.2 delivery provenance
+
+The following records the September 13 prehardware delivery. Later commissioning and app releases are described above.
 
 The selected personal test build is [GitHub Actions run 34752997335](https://github.com/EdgarAllenPoe/hermes-voice-build/actions/runs/34752997335), from commit **`073af6bad44e0519368257abc515aa451c4a65f9`**, September 13, 2026. Both Android and firmware compiler/verification jobs completed successfully. Both build records contain `complete: true` and `hardware_tested: false`.
 
@@ -22,7 +26,7 @@ See [VERIFIED_BUILD.md](VERIFIED_BUILD.md) for selected file hashes, toolchain d
 
 The Android receiver endpoint is prefilled as `http://100.99.200.55:8765/v1/voice` and remains editable. No server bearer token is baked into the APK. Generate that token on the Hermes host and enter it privately during app setup. Receiver commissioning remains **review-first**; these builds do not deploy or start a receiver or invoke Hermes.
 
-Android baseline: JDK 17, Gradle 8.11.1, AGP 8.10.1, compile/target SDK 36, minimum SDK 33. The delivered compiled manifest confirms package `org.tomstout.hermesvoice`, version 0.2.0 / version code 2. Android 17 is the intended phone OS, not a claim of physical-device testing. This is a debug-signed, debuggable personal app, not a Play Store release.
+Android baseline: JDK 17, Gradle 8.11.1, AGP 8.10.1, compile/target SDK 36, minimum SDK 33. The current personal app package remains org.tomstout.hermesvoice, version 0.4.0 / version code 6. The sideloaded release APK is not debuggable. It retains the original signing key so installation can update the existing app in place. This project does not publish through the Play Store.
 
 Seeed PlatformIO distribution pinned to **`1ec1287f8e4bc4067a6fd593991e36875aef989f`**. The working board integration, SCons adapter and BLE compiler fixes are documented in `BOARD_INTEGRATION_NOTES.md`, `SCONS_ADAPTER_FIX.md`, and `BLE_BUILD_FIX.md`. The actual system rail is `vsys_3v3`; the obsolete original `power_en` assumption must not be restored.
 
@@ -36,7 +40,7 @@ CI builds now use a separate disposable Android package (org.tomstout.hermesvoic
 
 ## Source and verification scope
 
-This repository now includes the complete Android and firmware source, Linux receiver, hardware notes, synthetic fixtures, build helpers, and host tests restored from the configured v0.2 delivery kit. Compiled binaries and private delivery material remain outside the repository. The current version 0.3 source passes **121 host tests** and **6 Android emulator database tests**. The original restoration passed 69 tests; these dated results should not be confused with the expanded current suite. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
+This repository now includes the complete Android and firmware source, Linux receiver, hardware notes, synthetic fixtures, build helpers, and host tests restored from the configured v0.2 delivery kit. Compiled binaries and private delivery material remain outside the repository. The automated checks include the host suite, **27 dashboard health scenarios**, **19 recorder relay simulations**, and Android database, pairing, settings, UI and large-text tests on API levels 33, 35 and 36. The original restoration passed 69 tests; these dated results should not be confused with the expanded current suite. The kit's separate prebuilt upload helper passed **11 host tests**, without accessing hardware. Independent downloaded-binary checks are recorded in the delivery kit; they are not a security audit or physical acceptance test.
 
 The exact tracked source archived by the two CI jobs is byte-identical. The delivery kit includes it separately for provenance. Original manuals/test reports are preserved as dated historical records; the verified build notes and generated configuration supersede earlier target-build status and board-integration assumptions.
 

@@ -66,7 +66,7 @@ public final class MainActivity extends Activity {
             if(width>0&&lp.width!=width){lp.width=width;outer.setLayoutParams(lp);}
         });
         LinearLayout heading=column();heading.setPadding(dp(22),dp(20),dp(22),dp(14));
-        TextView brand=label(BuildConfig.CI_BUILD?"HERMES VOICE Ãƒâ€šÃ‚Â· PREVIEW":"HERMES VOICE",12,colors.accent,true);
+        TextView brand=label(BuildConfig.CI_BUILD?"HERMES VOICE \u00b7 PREVIEW":"HERMES VOICE",12,colors.accent,true);
         brand.setLetterSpacing(.13f);heading.addView(brand);
         TextView title=label("Your voice, connected.",27,colors.text,true);title.setAccessibilityHeading(true);
         add(heading,title,6);outer.addView(heading);
@@ -86,16 +86,16 @@ public final class MainActivity extends Activity {
         LinearLayout relayRow=new LinearLayout(this);relayRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView eyebrow=label("AT A GLANCE",11,colors.muted,true);eyebrow.setLetterSpacing(.1f);
         relayRow.addView(eyebrow,new LinearLayout.LayoutParams(0,-2,1));
-        relayLabel=label("Checking relayÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",12,colors.muted,false);relayRow.addView(relayLabel);page.addView(relayRow);
+        relayLabel=label("Checking relay\u2026",12,colors.muted,false);relayRow.addView(relayLabel);page.addView(relayRow);
         hero=column();hero.setPadding(dp(20),dp(20),dp(20),dp(20));add(page,hero,14);
         LinearLayout heroTop=new LinearLayout(this);heroTop.setGravity(Gravity.CENTER_VERTICAL);
-        heroSymbol=label("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢",24,colors.amber,true);heroSymbol.setGravity(Gravity.CENTER);
+        heroSymbol=label("\u2022",24,colors.amber,true);heroSymbol.setGravity(Gravity.CENTER);
         heroSymbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         heroTop.addView(heroSymbol,new LinearLayout.LayoutParams(dp(44),dp(44)));
         heroLabel=label("CHECKING STATUS",11,colors.amber,true);heroLabel.setLetterSpacing(.08f);
         LinearLayout.LayoutParams hl=new LinearLayout.LayoutParams(-2,-2);hl.setMarginStart(dp(12));heroTop.addView(heroLabel,hl);hero.addView(heroTop);
         heroTitle=label("Getting things ready",26,colors.text,true);heroTitle.setAccessibilityHeading(true);add(hero,heroTitle,14);
-        heroDetail=label("Reading your phone and recorder statusÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",15,colors.muted,false);add(hero,heroDetail,8);
+        heroDetail=label("Reading your phone and recorder status\u2026",15,colors.muted,false);add(hero,heroDetail,8);
         recorderCard=new HealthCard("Recorder");add(page,recorderCard.box,14);
         deliveryCard=new HealthCard("Delivery");add(page,deliveryCard.box,10);
         serverCard=new HealthCard("Server");add(page,serverCard.box,10);
@@ -119,11 +119,11 @@ public final class MainActivity extends Activity {
         add(delivery,label("Retrying keeps the same recording IDs, so successful receipts are not duplicated.",12,colors.muted,false),10);
         LinearLayout details=section(page,"Technical details");
         add(details,button("Refresh details",false,this::refresh),8);
-        diagnosticText=label("Reading diagnosticsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",13,colors.text,false);diagnosticText.setTypeface(Typeface.MONOSPACE);
+        diagnosticText=label("Reading diagnostics\u2026",13,colors.text,false);diagnosticText.setTypeface(Typeface.MONOSPACE);
         diagnosticText.setTextIsSelectable(true);diagnosticText.setTag("diagnostic_details");add(details,diagnosticText,16);
         add(page,button("Export diagnostics",false,this::exportDiagnostics),16);
         add(page,label("The export excludes your token, server address, transcripts and audio.",12,colors.muted,false),8);
-        add(page,label("Hermes Voice "+BuildConfig.VERSION_NAME+" Ãƒâ€šÃ‚Â· "+(BuildConfig.DEBUG?"test build":"release build"),12,colors.muted,false),20);
+        add(page,label("Hermes Voice "+BuildConfig.VERSION_NAME+" \u00b7 "+(BuildConfig.DEBUG?"test build":"release build"),12,colors.muted,false),20);
     }
     private void selectTab(int index){
         selectedTab=index==1?1:0;
@@ -162,8 +162,8 @@ public final class MainActivity extends Activity {
         setText(relayLabel,!s.relayEnabled?"Relay paused":s.relayRunning?"Relay active":"Relay not running");
         relayLabel.setTextColor(s.relayEnabled&&s.relayRunning?colors.green:colors.muted);
         checkButton.setEnabled(!s.checking);diagnosticCheck.setEnabled(!s.checking);
-        checkButton.setAlpha(s.checking?.65f:1f);setText(checkButton,s.checking?"Checking connectionÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦":"Check connection");
-        setText(diagnosticCheck,s.checking?"Checking connectionÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦":"Check connection");
+        checkButton.setAlpha(s.checking?.65f:1f);setText(checkButton,s.checking?"Checking connection\u2026":"Check connection");
+        setText(diagnosticCheck,s.checking?"Checking connection\u2026":"Check connection");
         setText(relayButton,s.relayEnabled&&s.relayRunning?"Pause relay":"Start relay");
         reviewButton.setEnabled(s.held>0);reviewButton.setAlpha(s.held>0?1f:.5f);
         retryButton.setEnabled(s.pending>0&&s.relayEnabled);retryButton.setAlpha(s.pending>0&&s.relayEnabled?1f:.5f);
@@ -224,7 +224,7 @@ public final class MainActivity extends Activity {
         token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
         token.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING|EditorInfo.IME_ACTION_DONE);
         token.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);token.setSaveEnabled(false);
-        token.setHint(Settings.prefs(this).contains("token")?"Saved Ãƒâ€šÃ‚Â· leave blank to keep":"Paste your server token");content.addView(token);
+        token.setHint(Settings.prefs(this).contains("token")?"Saved \u00b7 leave blank to keep":"Paste your server token");content.addView(token);
         add(content,label("Your saved token stays hidden. Changes take effect for the next connection check.",12,colors.muted,false),12);
         ScrollView scroller=new ScrollView(this);scroller.addView(content);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Server settings").setView(scroller)
@@ -268,7 +268,7 @@ public final class MainActivity extends Activity {
     private void permissionSettings(){
         if(!permissions()||checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
             request();
-            toast("If Android no longer shows a prompt, enable permissions in the phoneÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s app settings.");
+            toast("If Android no longer shows a prompt, enable permissions in the phone\u2019s app settings.");
         }else startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName())));
     }
     @Override public void onRequestPermissionsResult(int r,String[] p,int[] g){super.onRequestPermissionsResult(r,p,g);refresh();}
@@ -345,15 +345,15 @@ public final class MainActivity extends Activity {
     }
     private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private static void setText(TextView view,String text){if(!view.getText().toString().equals(text))view.setText(text);}
-    private static String symbol(DashboardState.Level l){return l==DashboardState.Level.GOOD?"ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“":l==DashboardState.Level.ERROR?"!":"ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢";}
+    private static String symbol(DashboardState.Level l){return l==DashboardState.Level.GOOD?"\u2713":l==DashboardState.Level.ERROR?"!":"\u2022";}
     private final class HealthCard {
         final LinearLayout box=column();final TextView badge,title,detail;
         HealthCard(String category){
             box.setPadding(dp(18),dp(16),dp(18),dp(16));box.setBackground(shape(colors.surface,colors.border,18));
             LinearLayout row=new LinearLayout(MainActivity.this);row.setGravity(Gravity.CENTER_VERTICAL);
             TextView name=label(category,13,colors.muted,true);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
-            badge=label("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Checking",11,colors.amber,true);badge.setPadding(dp(9),dp(5),dp(9),dp(5));row.addView(badge);box.addView(row);
-            title=label("CheckingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",19,colors.text,true);add(box,title,10);
+            badge=label("\u2022 Checking",11,colors.amber,true);badge.setPadding(dp(9),dp(5),dp(9),dp(5));row.addView(badge);box.addView(row);
+            title=label("Checking\u2026",19,colors.text,true);add(box,title,10);
             detail=label("",13,colors.muted,false);add(box,detail,6);
         }
         void render(DashboardState.Status status){
