@@ -49,6 +49,10 @@ public final class DashboardActivityTest {
         File folder=context.getExternalFilesDir("ui-screenshots");assertNotNull(folder);assertTrue(folder.isDirectory()||folder.mkdirs());
         try(OutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
         bitmap.recycle();
+        // Gradle uninstalls the test app afterward, deleting its private external files.
+        // Copy synthetic screenshots to the disposable emulator's shared Downloads first.
+        shell("mkdir -p /sdcard/Download/hermes-ui-screenshots");
+        shell("cp "+new File(folder,name+".png").getAbsolutePath()+" /sdcard/Download/hermes-ui-screenshots/"+name+".png");
     }
     @Test public void tabsAndLightLayoutAreUsable()throws Exception{
         launch();
