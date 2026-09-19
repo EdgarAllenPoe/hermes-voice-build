@@ -5,7 +5,7 @@
 # Print me first
 ## Hermes Voice Button • v0.1
 
-**Daily goal:** double-click the small device, speak, stop speaking, put it away. The phone remains locked. No assistant replacement. No phone microphone.
+**Daily goal:** tap the small device once, wait for green, speak, stop speaking, put it away. The phone remains locked. No assistant replacement. No phone microphone.
 
 **Read this as a prototype build package.** Host tests passed; target binaries and hardware behavior still need verification. Do not connect the LiPo before reviewing the charger setup. Do not rely on the device for important ideas until the acceptance tests pass.
 

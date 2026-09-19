@@ -77,14 +77,15 @@ For troubleshooting, use a debugger or temporarily enable a verified vendor cons
 
 | Gesture | Action |
 |---|---|
-| Single click while idle | Tentative pre-buffer only; discarded without a second click |
-| Double-click within about 500 ms | Record, retain pre-roll, green LED |
+| One short press and release while idle | Start recording; speak when the green LED lights |
 | Single click while recording | Finish/save immediately; manual-stop flag |
-| Speak then pause about 1.2 s | Automatic finish after energy gate has recognized activity |
+| Speak then pause about 2 s | Automatic finish after energy gate has recognized activity |
 | No detected activity for 5 s | Discard tentative speech capture |
 | Continuous recording reaches 60 s | Finish with maximum-duration flag |
 | Hold at least 1.5 s while idle | Open pairing for 60 s; release to pair |
 | Hold at least 10 s while idle | Forget old phone bond; recorded messages remain |
+
+Firmware 0.3.2 replaces double-click with a single tap. The microphone wakes on press; a stable release of 60 ms confirms recording, retaining up to 240 ms of available pre-roll. Holding for pairing never commits a recording. A press that stops recording cannot become a pairing or forget gesture if held.
 
 The 60-second limit includes pre-roll. The energy gate is deliberately simple; a loud environment can hold the recorder open until the limit. The absence of the phone does not prevent local recording when free slots exist.
 

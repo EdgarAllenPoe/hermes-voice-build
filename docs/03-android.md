@@ -70,7 +70,7 @@ Tap **Start relay** after saving settings and completing pairing. A persistent n
 
 ## Daily behavior
 
-Double-click the external recorder and speak; no phone interaction is part of the normal workflow. The microphone is on the recorder, not the phone or earbuds. The phone validates incoming data, commits its queue, vibrates once, and acknowledges the recorder. It uploads independently, then vibrates twice only after the server returns a matching acceptance receipt.
+With firmware 0.3.2, tap the external recorder once, release, and speak when its green light appears; no phone interaction is part of the normal workflow. The microphone is on the recorder, not the phone or earbuds. The phone validates incoming data, commits its queue, vibrates once, and acknowledges the recorder. It uploads independently, then vibrates twice only after the server returns a matching acceptance receipt.
 
 Android haptics can be disabled or missed. Neither vibration confirms transcription or completed Hermes actions. Do not speak into a covered phone expecting its microphone to record.
 

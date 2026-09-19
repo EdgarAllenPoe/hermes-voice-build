@@ -82,7 +82,9 @@
 - docs/12-first-flash.md
 - docs/13-server-commissioning.md
 - docs/14-microphone-commissioning.md
+- docs/15-single-press-recording.md
 - docs/HARDWARE-GUIDE.md
+- docs/Hermes-Voice-Hardware-Guide-0.3.2.docx
 - docs/Hermes-Voice-Hardware-Guide.docx
 - docs/hardware-guide.json
 - docs/host-tests.txt

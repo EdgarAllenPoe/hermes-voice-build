@@ -1,5 +1,7 @@
 # Microphone commissioning and firmware 0.3.1
 
+Historical record: the controls and timing below describe 0.3.1. For current single-tap recording and a two-second silence timeout, see [firmware 0.3.2](15-single-press-recording.md).
+
 On September 18, 2026, a XIAO nRF54LM20A Sense connected to the personal Android app 0.3.1 recorded and delivered a 2.28-second manual test. The receiver produced a numeric transcript and held it in review. The test did not invoke Hermes.
 
 ## Why automatic recording stopped early

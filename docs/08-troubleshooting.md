@@ -8,9 +8,9 @@ Do not change firmware, Android, Tailscale and Hermes simultaneously. Establish 
 |---|---|---|
 | Board build reports unknown label/Kconfig symbol | Correct Sense board, Seeed BSP version, generated DTS and manufacturer examples | Guess GPIOs or remove charger checks |
 | Board shows red after startup/click | Mic rail, flash initialization, queue capacity, debug evidence | Assume it is merely low battery |
-| Double-click loses first word | Actual mic-settling delay, debounce/window, first-click timing and audio waveform | Wait for a phone vibration and call it instant capture |
+| Single tap loses first word | Wait for green after release; inspect mic settling, release debounce and audio waveform | Wait for a phone vibration and call it instant capture |
 | Auto-stop never happens | Background noise, energy threshold, 60 s cap/manual stop | Assume the energy gate recognizes human speech |
-| Auto-stop too early | Natural pauses versus 1.2 s timeout | Increase sensitivity blindly without noise tests |
+| Auto-stop too early | Natural pauses versus 2 s timeout in firmware 0.3.2 | Increase sensitivity blindly without noise tests |
 | Recorder not in pairing chooser | Physical pairing window, antenna, Bluetooth/Location Services, wrong device/bond | Share the passkey publicly |
 | Pairing reports an invalid Bluetooth address | Update the personal app to 0.3.1 or later, then retry Pair voice button; 0.3.0 passed lowercase addresses to an uppercase-only Android API | Uninstall the app, erase its data, or reflash the recorder for this formatting error |\n| Android association exists but transfer fails | Separate Bluetooth bond/passkey, permissions, authenticated characteristic access | Treat association as equivalent to pairing |
 | Locked phone does not respond | First unlock, Force stop status, relay enabled, OS battery restrictions | Promise Android restrictions can be bypassed |

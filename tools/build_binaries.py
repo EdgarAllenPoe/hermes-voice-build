@@ -19,6 +19,15 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BOARD = 'seeed-xiao-nrf54lm20a'
+FIRMWARE_VERSION = '0.3.2'
+
+def android_version() -> str:
+    text = (ROOT / 'android/app/build.gradle').read_text(encoding='utf-8')
+    match = re.search(r'versionName\s+[\"\']([^\"\']+)[\"\']', text)
+    if not match:
+        raise ValueError('Android versionName is missing')
+    return match.group(1)
+
 
 
 def find_executable(name: str, candidates: list[Path]) -> str | None:
@@ -174,7 +183,7 @@ def build_android(tools: dict[str, str], out: Path, logs: Path, offline: bool) -
     apk = ROOT / 'android/app/build/outputs/apk/debug/app-debug.apk'
     verify_apk_structure(apk)
     run([tools['apksigner'], 'verify', '--verbose', '--print-certs', str(apk)], logs / 'apk-signature.txt', env)
-    shutil.copy2(apk, out / ('Hermes-Voice-0.3.1-ci.apk' if env.get('HVB_CI_BUILD')=='1' else 'Hermes-Voice-0.3.1-test.apk'))
+    shutil.copy2(apk, out / ('Hermes-Voice-' + android_version() + ('-ci.apk' if env.get('HVB_CI_BUILD')=='1' else '-test.apk')))
     # Retain the selected personal keystore for compatible future updates.
 
 
@@ -255,8 +264,8 @@ def main() -> int:
     out.mkdir(parents=True)
     logs.mkdir(parents=True)
     result = {'created_utc': stamp, 'target': args.target, 'complete': False,
-              'hardware_tested': False, 'version':'0.3.1',
-              'component_versions': {'android':'0.3.1','firmware':'0.3.1'}, 'identity_profile':'ci-disposable' if os.environ.get('HVB_CI_BUILD')=='1' else 'personal', 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
+              'hardware_tested': False, 'version':FIRMWARE_VERSION if args.target=='firmware' else android_version(),
+              'component_versions': {'android':android_version(),'firmware':FIRMWARE_VERSION}, 'identity_profile':'ci-disposable' if os.environ.get('HVB_CI_BUILD')=='1' else 'personal', 'endpoint': 'http://100.99.200.55:8765/v1/voice', 'completed_stages': []}
     code = 1
     try:
         if args.target in ('all', 'android'):

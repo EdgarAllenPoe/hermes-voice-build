@@ -19,3 +19,7 @@ Corrections to the earlier discussion:
 ## 0.3.0 prehardware reliability
 
 Added a host-tested Android transfer controller with worker-thread I/O, queue schema 2 migration, per-message HTTP holds and backoff, diagnostic export and server health testing. Added firmware boot CRC quarantine, non-destructive connection-local SKIP, capture/flash counters and testable button timing. Added stable personal identity restoration, isolated CI app builds, receiver transcript editing/rejection, fair scheduling and explicit cleanup. Added real speech comparison tooling, emulator database tests and the printable hardware workshop guide. Hardware acceptance remains outstanding.
+
+## Firmware 0.3.2 single press recording
+
+A short press and release starts recording. Microphone warmup begins on press; stable release confirms the capture and green LED. Pairing still uses a 1.5-second idle hold, and bond reset a 10-second idle hold. Holding a manual-stop press cannot accidentally pair or forget. Release debounce tolerates mechanical switch bounce, including events queued during microphone warmup. Speech now ends after two seconds of silence instead of 1.2 seconds. Speech sensitivity, five-second no-speech cancellation, 60-second limit, BLE protocol, pairing identity and storage layout are unchanged.

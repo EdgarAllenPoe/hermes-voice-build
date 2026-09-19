@@ -44,7 +44,7 @@ class NativeCodecTests(unittest.TestCase):
  def test_gate_speech_then_silence(self):
   g=Gate();voice=self.PCM(*([2000,-2000]*160));sil=self.PCM(*([0]*320))
   for _ in range(10):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
-  for _ in range(59):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
+  for _ in range(99):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
   self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),1)
  def test_gate_limit(self):
   g=Gate();voice=self.PCM(*([2000,-2000]*160))
@@ -65,7 +65,7 @@ class NativeCodecTests(unittest.TestCase):
    for _ in range(30):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
    for _ in range(20):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),noise,self.threshold),0)
   self.assertTrue(g.heard)
-  for _ in range(39):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),noise,self.threshold),0)
+  for _ in range(79):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),noise,self.threshold),0)
   self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),noise,self.threshold),1)
  def test_board_noise_and_short_click_do_not_count_as_speech(self):
   g=Gate();noise=self.PCM(*([1008,992]*160));click=self.PCM(*([1800,200]*160))
@@ -74,3 +74,19 @@ class NativeCodecTests(unittest.TestCase):
    result=self.c.hvb_gate_update(ctypes.byref(g),frame,self.threshold)
    self.assertEqual(result,2 if i==249 else 0)
   self.assertFalse(g.heard)
+
+
+ def test_pause_longer_than_old_timeout_stays_in_same_recording(self):
+  g=Gate();voice=self.PCM(*([2000,-2000]*160));sil=self.PCM(*([0]*320))
+  for _ in range(3):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
+  # 1.5 seconds used to stop at 1.2 seconds; now it must keep recording.
+  for _ in range(75):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
+  for _ in range(10):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
+  for _ in range(99):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
+  self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),1)
+
+ def test_maximum_duration_wins_over_silence(self):
+  g=Gate();voice=self.PCM(*([2000,-2000]*160));sil=self.PCM(*([0]*320))
+  for _ in range(2900):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
+  for _ in range(99):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
+  self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),3)

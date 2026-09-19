@@ -34,6 +34,8 @@ def table(doc,block):
 def main():
     pages=json.loads((ROOT/'docs/hardware-guide.json').read_text(encoding='utf-8'))
     doc=Document();section=doc.sections[0]
+    for node in doc.styles.element.xpath('.//w:pBdr'):
+        node.getparent().remove(node)
     section.page_width=Inches(8.5);section.page_height=Inches(11)
     section.top_margin=section.bottom_margin=Inches(.65)
     section.left_margin=section.right_margin=Inches(.8);section.footer_distance=Inches(.3)
@@ -45,7 +47,7 @@ def main():
     doc.styles['Heading 1'].paragraph_format.space_after=Pt(10)
     doc.styles['Heading 2'].font.size=Pt(12);doc.styles['Heading 2'].paragraph_format.space_before=Pt(8)
     footer=section.footer.paragraphs[0]
-    footer.add_run('Hermes Voice 0.3   |   Hardware acceptance pending   |   Page ').font.size=Pt(8)
+    footer.add_run('Hermes Voice firmware 0.3.2   |   Hardware acceptance pending   |   Page ').font.size=Pt(8)
     field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');footer._p.append(field)
     md=[]
     for index,page in enumerate(pages):
@@ -81,8 +83,8 @@ def main():
                 md.append('!['+block['alt']+']('+block['file']+')\n')
     doc.core_properties.title='Hermes Voice hardware workshop guide'
     doc.core_properties.subject='Wiring programming and commissioning for XIAO nRF54LM20A Sense'
-    doc.core_properties.author='Hermes Voice Project';doc.core_properties.keywords='Hermes Voice 0.3 hardware commissioning'
-    out=ROOT/'docs/Hermes-Voice-Hardware-Guide.docx';doc.save(out)
+    doc.core_properties.author='Hermes Voice Project';doc.core_properties.keywords='Hermes Voice firmware 0.3.2 hardware commissioning'
+    out=ROOT/'docs/Hermes-Voice-Hardware-Guide-0.3.2.docx';doc.save(out)
     (ROOT/'docs/HARDWARE-GUIDE.md').write_text('\n'.join(md),encoding='utf-8',newline='\n')
     print('Created '+str(out)+' from '+str(len(pages))+' planned workshop pages')
 if __name__=='__main__':main()

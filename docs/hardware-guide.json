@@ -4,7 +4,7 @@
     "blocks": [
       {
         "type": "text",
-        "text": "Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Version 0.3 | September 13 2026."
+        "text": "Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Controls updated for firmware 0.3.2 | September 19 2026."
       },
       {
         "type": "text",
@@ -16,7 +16,7 @@
       },
       {
         "type": "text",
-        "text": "The private delivery kit still contains the original v0.2 APK and firmware. Those files are preserved for reference. The diagnostics, recovery controls and review improvements in this guide require version 0.3 built from the updated source. A CI app marked CI test uses a separate package and is not your personal installation."
+        "text": "Use personal Android 0.4.0 and recorder firmware 0.3.2 for the current controls. Earlier binaries remain for reference. Single tap replaces double click, and silence saving now waits two seconds. If the installed app still shows a double-press tip, follow this guide. A CI app uses a separate identity."
       },
       {
         "type": "table",
@@ -43,7 +43,7 @@
           ],
           [
             "5",
-            "Build personal version 0.3"
+            "Build the personal firmware"
           ],
           [
             "6",
@@ -282,7 +282,7 @@
     ]
   },
   {
-    "title": "Build personal version 0.3",
+    "title": "Build the personal firmware",
     "blocks": [
       {
         "type": "text",
@@ -322,7 +322,7 @@
             "Purpose"
           ],
           [
-            "Hermes-Voice-0.3.0-test.apk",
+            "Hermes-Voice-0.4.0-test.apk",
             "Personal Android app using the retained key"
           ],
           [
@@ -475,14 +475,14 @@
       {
         "type": "steps",
         "items": [
-          "Copy the personal Hermes-Voice-0.3.0-test.apk from the successful build folder to your Android phone. Open it and approve installation from that specific file-opening app when Android asks.",
+          "Copy the delivered android/Hermes-Voice-0.4.0.apk from the kit folder to your Android phone. Open it and approve installation from that specific file-opening app when Android asks.",
           "If an older personal app is installed, update it using the same signing key. Do not uninstall an app holding undelivered recordings to resolve a signature mismatch. Restore the matching key and rebuild instead. [4]",
           "Open Hermes Voice. Grant Nearby devices/Bluetooth permissions and notification permission. The recorder uses its own microphone; the app does not request phone microphone access.",
-          "Enter the correct private receiver endpoint and bearer token, then tap Save server settings. Leaving the token field blank preserves an already stored token.",
-          "Tap Test server connection. Expect Server reachable and token accepted. This sends a health check and does not invoke Hermes. Fix the endpoint, token or Tailscale connection before continuing.",
+          "Enter the correct private receiver endpoint and bearer token, using Server settings on the Diagnostics tab, then save. Leaving the token field blank preserves an already stored token.",
+          "On the Status tab, tap Check connection. Expect Server reachable and token accepted. This sends a health check and does not invoke Hermes. Fix the endpoint, token or Tailscale connection before continuing.",
           "Power the recorder from USB with its antenna attached and the battery disconnected. Hold its capture button for about 1.5 seconds, then release; this opens a 60-second pairing window.",
-          "Tap Pair voice button and select the recorder. Complete Android's association prompt and the separate Bluetooth pairing prompt using the matching private pairing card.",
-          "Tap Start relay. Use Refresh status to inspect the connection and recorder information. The current firmware should report version 0.3.0 when it connects.",
+          "On the Diagnostics tab, tap Pair recorder and select the recorder. Complete Android's association prompt and the separate Bluetooth pairing prompt using the matching private pairing card.",
+          "Tap Start relay. Open Diagnostics to inspect recorder information. The current firmware should report version 0.3.2 when it connects.",
           "Unlock once after a phone reboot. Keep Bluetooth and Tailscale enabled. If you explicitly Force stop the app, reopen it and start the relay again; the app cannot bypass Android's force-stop rules."
         ]
       },
@@ -502,19 +502,19 @@
             "Expected behavior"
           ],
           [
-            "Single click while idle",
-            "No stored recording; tentative microphone activity expires"
+            "Short press and release while idle",
+            "Starts recording; wait for green before speaking"
           ],
           [
-            "Double click and speak",
-            "Start recording, including available pre-roll"
+            "Hold 1.5 seconds while idle",
+            "Open pairing; no recording is saved"
           ],
           [
             "Single click while recording",
             "Finish and save; an empty capture is cancelled"
           ],
           [
-            "About 1.2 seconds of silence after detected speech",
+            "About 2 seconds of silence after detected speech",
             "Automatic finish under the simple energy gate"
           ],
           [
@@ -559,12 +559,12 @@
           ],
           [
             "1",
-            "Single idle click produces no saved or uploaded message.",
+            "Tap once and release. Green lights and recording starts.",
             "____________"
           ],
           [
             "2",
-            "Double click, speak immediately, then stop. The first and final words are audible.",
+            "Tap once, wait for green, speak, then pause two seconds. First and final words are audible.",
             "____________"
           ],
           [
@@ -574,7 +574,7 @@
           ],
           [
             "4",
-            "Pause naturally within a thought. Record whether the 1.2-second silence gate cuts it short.",
+            "Pause 1.5 seconds within a thought and continue speaking. The recording must remain open.",
             "____________"
           ],
           [

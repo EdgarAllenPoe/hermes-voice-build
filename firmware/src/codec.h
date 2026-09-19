@@ -3,6 +3,9 @@
 #include <stdint.h>
 #define HVB_FRAME_SAMPLES 320
 #define HVB_FRAME_BYTES 164
+#define HVB_FRAME_MS 20u
+#define HVB_SILENCE_MS 2000u
+#define HVB_SILENCE_FRAMES (HVB_SILENCE_MS / HVB_FRAME_MS)
 /* Mean absolute deviation in 16-bit PCM units, independent of DC offset. */
 /* Sense board: quiet room 3-8, test speech up to 139 (2026-09-18). */
 #define HVB_VAD_THRESHOLD 40u

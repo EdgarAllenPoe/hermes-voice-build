@@ -1,19 +1,19 @@
 # Hermes Voice hardware workshop guide
 
-Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Version 0.3 | September 13 2026.
+Wiring, programming and testing the Seeed Studio XIAO nRF54LM20A Sense recorder with the Hermes Voice Android relay and Linux receiver. Controls updated for firmware 0.3.2 | September 19 2026.
 
 Use this guide at the workbench when your hardware arrives. Work through the stages in order and record the results. Begin with USB power and the battery disconnected. Successful compilation is preparation for these tests; it does not establish physical operation.
 
 ## Choose the correct software
 
-The private delivery kit still contains the original v0.2 APK and firmware. Those files are preserved for reference. The diagnostics, recovery controls and review improvements in this guide require version 0.3 built from the updated source. A CI app marked CI test uses a separate package and is not your personal installation.
+Use personal Android 0.4.0 and recorder firmware 0.3.2 for the current controls. Earlier binaries remain for reference. Single tap replaces double click, and silence saving now waits two seconds. If the installed app still shows a double-press tip, follow this guide. A CI app uses a separate identity.
 
 | Page | Workshop stage |
 | --- | --- |
 | 2 | Parts and wiring |
 | 3 | Unpowered assembly and inspection |
 | 4 | Prepare the Windows computer |
-| 5 | Build personal version 0.3 |
+| 5 | Build the personal firmware |
 | 6 | Program the recorder over USB |
 | 7 | Prepare the Linux receiver |
 | 8 | Install and pair the Android app |
@@ -117,7 +117,7 @@ Expected: the checker finds the required tool paths. Missing prerequisites are a
 
 Actual SDK directory: ____________________________________________________
 
-# Build personal version 0.3
+# Build the personal firmware
 
 Keep using the PowerShell session from page 4. Your personal app must retain its signing key, and your recorder firmware must retain its matching pairing header and card. The local files were restored from the original backup during this update. The commands below also document recovery after a future move or fresh checkout.
 
@@ -140,7 +140,7 @@ This can take several minutes and downloads missing dependencies. It creates a n
 
 | File in the successful build folder | Purpose |
 | --- | --- |
-| Hermes-Voice-0.3.0-test.apk | Personal Android app using the retained key |
+| Hermes-Voice-0.4.0-test.apk | Personal Android app using the retained key |
 | Hermes-Voice-XIAO-nRF54LM20A-Sense.hex | Preferred recorder image for the uploader |
 | generated-zephyr.dts and generated-zephyr.config | Effective board and charger configuration |
 | PRIVATE-pairing-card.txt | Pairing card matching that firmware |
@@ -216,24 +216,24 @@ Chosen endpoint: ________________________________________________________
 
 # Install and pair the Android app
 
-1. Copy the personal Hermes-Voice-0.3.0-test.apk from the successful build folder to your Android phone. Open it and approve installation from that specific file-opening app when Android asks.
+1. Copy the delivered android/Hermes-Voice-0.4.0.apk from the kit folder to your Android phone. Open it and approve installation from that specific file-opening app when Android asks.
 2. If an older personal app is installed, update it using the same signing key. Do not uninstall an app holding undelivered recordings to resolve a signature mismatch. Restore the matching key and rebuild instead. [4]
 3. Open Hermes Voice. Grant Nearby devices/Bluetooth permissions and notification permission. The recorder uses its own microphone; the app does not request phone microphone access.
-4. Enter the correct private receiver endpoint and bearer token, then tap Save server settings. Leaving the token field blank preserves an already stored token.
-5. Tap Test server connection. Expect Server reachable and token accepted. This sends a health check and does not invoke Hermes. Fix the endpoint, token or Tailscale connection before continuing.
+4. Enter the correct private receiver endpoint and bearer token, using Server settings on the Diagnostics tab, then save. Leaving the token field blank preserves an already stored token.
+5. On the Status tab, tap Check connection. Expect Server reachable and token accepted. This sends a health check and does not invoke Hermes. Fix the endpoint, token or Tailscale connection before continuing.
 6. Power the recorder from USB with its antenna attached and the battery disconnected. Hold its capture button for about 1.5 seconds, then release; this opens a 60-second pairing window.
-7. Tap Pair voice button and select the recorder. Complete Android's association prompt and the separate Bluetooth pairing prompt using the matching private pairing card.
-8. Tap Start relay. Use Refresh status to inspect the connection and recorder information. The current firmware should report version 0.3.0 when it connects.
+7. On the Diagnostics tab, tap Pair recorder and select the recorder. Complete Android's association prompt and the separate Bluetooth pairing prompt using the matching private pairing card.
+8. Tap Start relay. Open Diagnostics to inspect recorder information. The current firmware should report version 0.3.2 when it connects.
 9. Unlock once after a phone reboot. Keep Bluetooth and Tailscale enabled. If you explicitly Force stop the app, reopen it and start the relay again; the app cannot bypass Android's force-stop rules.
 
 ## Recorder controls
 
 | Action | Expected behavior |
 | --- | --- |
-| Single click while idle | No stored recording; tentative microphone activity expires |
-| Double click and speak | Start recording, including available pre-roll |
+| Short press and release while idle | Starts recording; wait for green before speaking |
+| Hold 1.5 seconds while idle | Open pairing; no recording is saved |
 | Single click while recording | Finish and save; an empty capture is cancelled |
-| About 1.2 seconds of silence after detected speech | Automatic finish under the simple energy gate |
+| About 2 seconds of silence after detected speech | Automatic finish under the simple energy gate |
 | Continuous speech or noise | Stop at the 60-second maximum |
 | Hold about 10 seconds while idle | Forget phone bond; recordings remain |
 
@@ -247,10 +247,10 @@ Use USB power with the battery disconnected. Keep the Linux worker in review mod
 
 | No | Test and expected result | Pass or notes |
 | --- | --- | --- |
-| 1 | Single idle click produces no saved or uploaded message. | ____________ |
-| 2 | Double click, speak immediately, then stop. The first and final words are audible. | ____________ |
+| 1 | Tap once and release. Green lights and recording starts. | ____________ |
+| 2 | Tap once, wait for green, speak, then pause two seconds. First and final words are audible. | ____________ |
 | 3 | Try a quiet phrase and a normal-volume phrase. Listen to both decoded files. | ____________ |
-| 4 | Pause naturally within a thought. Record whether the 1.2-second silence gate cuts it short. | ____________ |
+| 4 | Pause 1.5 seconds within a thought and continue speaking. The recording must remain open. | ____________ |
 | 5 | Record without speaking for five seconds. Check that no unwanted message is kept. | ____________ |
 | 6 | Speak continuously. Recording stops by the 60-second limit. | ____________ |
 | 7 | Use manual stop before the limit. The recording validates and contains the intended words. | ____________ |

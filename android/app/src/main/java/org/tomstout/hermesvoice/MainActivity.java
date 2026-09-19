@@ -102,7 +102,7 @@ public final class MainActivity extends Activity {
         checkButton=button("Check connection",true,this::checkConnection);checkButton.setTag("check_connection");add(page,checkButton,18);
         relayButton=button("Start relay",false,this::toggleRelay);relayButton.setTag("relay_toggle");add(page,relayButton,8);
         receiptLabel=label("Server receipts confirm delivery. Hermes replies arrive separately in Telegram.",12,colors.muted,false);add(page,receiptLabel,14);
-        TextView tip=label("Double-press the recorder button to speak. A short pause finishes your recording.",13,colors.muted,false);add(page,tip,10);
+        TextView tip=label("Use the recorder button to start. Speak when the green light appears; pause to save.",13,colors.muted,false);add(page,tip,10);
         updatedLabel=label("",11,colors.muted,false);add(page,updatedLabel,16);
     }
     private void buildDiagnostics(LinearLayout page){

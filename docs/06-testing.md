@@ -21,7 +21,7 @@ Use harmless phrases that do not trigger consequential actions. Leave server del
 | USB-only firmware build/boot | Correct board/rail labels; usable microphone; no target build error | ______ |
 | Charger verification | 100 mA intended profile; correct 4.20 V termination; safe behavior | ______ |
 | Idle single click | No stored or uploaded message | ______ |
-| Natural double-click and immediate speech | First word and final word preserved | ______ |
+| Single tap, release, green light, then speech | First word and final word preserved | ______ |
 | 50–100 repeated captures | Measured startup reliability; no leaks or lost audio buffers | ______ |
 | Quiet voice / room noise / outdoors | Threshold chosen from decoded recordings, not LED alone | ______ |
 | Normal pauses inside an idea | No unacceptable premature auto-stop | ______ |
@@ -54,7 +54,7 @@ Do not short the battery, over-discharge it or disconnect live test equipment un
 
 Measure from the **second click** to the first valid captured samples using a repeatable audible reference and scope/logic trace where available. Record typical and worst-case results, not only the best trial. At least one test should involve speaking the exact first syllable immediately after the second click.
 
-The 100 ms rail-settling delay and 500 ms double-click window are tuning parameters, not measured guarantees. Improving this latency must not introduce buffer overruns, truncate speech or trade away durable storage without an explicit design change.
+The 100 ms rail-settling delay and 60 ms release debounce are tuning parameters, not measured end-to-end latency guarantees. Test a 1.5-second pause within speech and a two-second final pause. Holding to pair must not save a recording; holding a manual-stop press must not pair or forget the phone. Improving this latency must not introduce buffer overruns, truncate speech or trade away durable storage without an explicit design change.
 
 ## Human workflow tests
 

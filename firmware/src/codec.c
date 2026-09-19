@@ -39,7 +39,7 @@ int hvb_gate_update(struct hvb_gate *g,const int16_t *pcm,unsigned threshold){
     if(voiced){g->voiced_run++;g->silence=0;if(g->voiced_run>=3)g->heard=1;}
     else {g->voiced_run=0;g->silence++;}
     if(g->frames>=3000)return 3;
-    if(g->heard&&g->silence>=60)return 1;
+    if(g->heard&&g->silence>=HVB_SILENCE_FRAMES)return 1;
     if(!g->heard&&g->frames>=250)return 2;
     return 0;
 }
