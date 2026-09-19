@@ -2,7 +2,7 @@
 
 ## Current app and recorder
 
-Android **0.4.0** adds an accessible two-tab interface: an everyday Status screen with green/yellow/red indicators, and a Diagnostics screen for setup and troubleshooting. It follows the phone's light/dark setting, refreshes while visible, labels stale recorder readings, and requires recent evidence before showing a healthy server. The personal APK uses a non-debuggable release build and the retained signing identity. See [the Android guide](docs/03-android.md).
+Android **0.4.0** adds an accessible two-tab interface: an everyday Status screen with green/yellow/red indicators, and a Diagnostics screen for setup and troubleshooting. It follows the phone's light/dark setting, refreshes while visible, labels stale recorder readings, and requires recent evidence before showing a healthy server. The personal APK uses a non-debuggable release build and the retained signing identity. See [the Android guide](docs/03-android.md) and [the release verification record](APK_v0.4.0_VERIFIED.md).
 
 Firmware **0.3.1** has been flashed to the XIAO nRF54LM20A Sense and physically commissioned for microphone capture, Bluetooth transfer and server delivery. Battery-only operation and charging acceptance remain unresolved; use the board over USB with the battery disconnected until those checks are complete. See [microphone commissioning](docs/14-microphone-commissioning.md).
 
