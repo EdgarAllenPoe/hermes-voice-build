@@ -19,7 +19,7 @@ final class TransferEngine {
         void problem(String code);
     }
     interface Inbox { boolean accept(byte[] bytes) throws Exception; }
-    enum State { IDLE,NEXT,META,OFFSET,DATA,ACK,INFO,SKIP }
+    enum State { IDLE,NEXT,META,OFFSET,DATA,BURST,ACK,INFO,SKIP }
     private final Port port;
     private final Inbox inbox;
     private final File directory;
@@ -29,7 +29,25 @@ final class TransferEngine {
     private File partFile;
     private String id;
     private int total,offset;
-    private boolean skipSupported;
+    private boolean skipSupported,burstSupported,burstWriteDone;
+    private int burstToken,burstPackets;private static final java.util.concurrent.atomic.AtomicInteger TOKENS=new java.util.concurrent.atomic.AtomicInteger(new java.security.SecureRandom().nextInt());
+    boolean isIdle(){return state==State.IDLE;}
+    boolean isBurst(){return state==State.BURST;}
+    void connected(boolean supportsSkip,boolean supportsBurst)throws IOException{burstSupported=supportsBurst;connected(supportsSkip);}
+    void notification(byte[] b)throws Exception{
+        if(state!=State.BURST||b.length<9||Wire.le32(b,1)!=burstToken)return;
+        if(b[0]==3)throw new IOException("Recorder burst read failed");
+        if(b[0]!=1||b.length==9||b.length>244)throw new IOException("Invalid burst packet");
+        int position=Wire.le32(b,5),count=b.length-9;
+        if(position<offset&&position+count<=offset)return; // duplicate, never append twice
+        if(position!=offset||offset+count>total||burstPackets>=16)throw new IOException("Burst offset gap or overflow");
+        partial.seek(offset);partial.write(b,9,count);offset+=count;burstPackets++;port.progress(offset,total);advanceBurst();
+    }
+    private void advanceBurst()throws Exception{
+        if(!burstWriteDone)return;
+        if(offset==total)complete();
+        else if(burstPackets==16){partial.getFD().sync();requestChunk();}
+    }
     TransferEngine(File directory,Inbox inbox,Port port) {
         this.directory=directory;this.inbox=inbox;this.port=port;
     }
@@ -45,6 +63,7 @@ final class TransferEngine {
     }
     void written() throws Exception {
         switch(state) {
+            case BURST -> {burstWriteDone=true;advanceBurst();}
             case NEXT -> {state=State.META;port.read(true);}
             case OFFSET -> {state=State.DATA;port.read(false);}
             case ACK -> {
@@ -77,7 +96,11 @@ final class TransferEngine {
         offset=(int)partial.length();port.progress(offset,total);
         if(offset==total)complete();else requestChunk();
     }
-    private void requestChunk(){state=State.OFFSET;port.write(Wire.readCommand(offset));}
+    private void requestChunk(){
+        if(burstSupported){state=State.BURST;burstToken=TOKENS.incrementAndGet();burstPackets=0;burstWriteDone=false;
+            port.write(java.nio.ByteBuffer.allocate(9).order(java.nio.ByteOrder.LITTLE_ENDIAN).put((byte)9).putInt(offset).putInt(burstToken).array());
+        }else{state=State.OFFSET;port.write(Wire.readCommand(offset));}
+    }
     private void chunk(byte[] bytes) throws Exception {
         if(partial==null||bytes.length==0||bytes.length>180||offset+bytes.length>total)
             throw new IOException("Invalid audio chunk");

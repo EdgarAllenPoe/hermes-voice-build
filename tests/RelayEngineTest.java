@@ -27,6 +27,7 @@ public final class RelayEngineTest {
         final List<String> confirmedCounts=new ArrayList<>();
         byte[] selected;int at,acks,saves,steps,statusReads;
         boolean failCommit,lostAck,failRead,invalidChunk,skip=true,disconnectAfterAck,recordDuringAck,noInfo;
+        boolean burst,early,duplicate,stale,gap;
         String afterAck;
 
         Exception error;
@@ -43,7 +44,7 @@ public final class RelayEngineTest {
             byte[] info=new byte[]{1,0,(byte)recordings.size(),0,0,0,0,0};
             status.update(new RecorderInfo(info));statusReads++;
         }
-        void start() throws Exception {error=null;skipped.clear();if(!noInfo)snapshot();engine.connected(skip);pump();}
+        void start() throws Exception {error=null;skipped.clear();if(!noInfo)snapshot();engine.connected(skip,burst);pump();}
         interface Op {void run()throws Exception;}
         void enqueue(Op op){events.add(()->{try{op.run();}catch(Exception e){error=e;events.clear();try{engine.disconnected();}catch(Exception ignored){}}});}
         void pump(){while(!events.isEmpty()){require(++steps<10000,"loop");events.remove().run();}}
@@ -52,6 +53,16 @@ public final class RelayEngineTest {
                 switch(b[0]){
                     case 1 -> selected=recordings.stream().filter(x->!skipped.contains(Wire.id(x,24))).findFirst().orElse(null);
                     case 2 -> at=Wire.le32(b,1);
+                    case 9 -> {
+                        int position=Wire.le32(b,1),token=Wire.le32(b,5);
+                        for(int i=0;i<16&&position<selected.length;i++){
+                            int count=Math.min(235,selected.length-position);byte[] packet=new byte[9+count];
+                            ByteBuffer v=ByteBuffer.wrap(packet).order(ByteOrder.LITTLE_ENDIAN);v.put((byte)1).putInt(token).putInt(gap&&i==0?position+1:position);System.arraycopy(selected,position,packet,9,count);position+=count;
+                            if(stale){byte[] old=packet.clone();ByteBuffer.wrap(old).order(ByteOrder.LITTLE_ENDIAN).putInt(1,token-1);if(early)engine.notification(old);else enqueue(()->engine.notification(old));}
+                            if(early)engine.notification(packet);else enqueue(()->engine.notification(packet));
+                            if(duplicate){if(early)engine.notification(packet);else enqueue(()->engine.notification(packet));}
+                        }
+                    }
                     case 3 -> {
                         String id=Wire.id(b,1);require(inbox.containsKey(id),"ACK before durable acceptance");
                         acks++;if(lostAck){lostAck=false;throw new IOException("ACK response lost");}
@@ -171,6 +182,25 @@ public final class RelayEngineTest {
         try(Sim s=new Sim()){
             s.recordings.add(audio(52,3));s.noInfo=true;s.start();
             require(s.acks==1&&s.status.text().equals("not available"),"missing INFO does not block transfer or invent queue");cases++;
+        }
+        for(boolean early:new boolean[]{false,true})try(Sim s=new Sim()){
+            s.burst=true;s.early=early;s.recordings.add(audio(80,3000));s.start();
+            require(s.error==null&&s.acks==1&&s.saves==1&&s.recordings.isEmpty(),"burst maximum duration, notification/write ordering "+early);cases++;
+        }
+        try(Sim s=new Sim()){
+            s.burst=true;s.early=true;s.duplicate=true;s.stale=true;s.recordings.add(audio(81,50));s.start();
+            require(s.error==null&&s.acks==1&&s.saves==1,"duplicate and stale-token notifications do not duplicate data");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.burst=true;s.gap=true;s.recordings.add(audio(82,50));s.start();require(s.error!=null&&s.acks==0&&s.inbox.isEmpty(),"burst gaps never ACK");
+            s.burst=false;s.gap=false;s.start();require(s.error==null&&s.acks==1,"burst gap recovers using legacy pull");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.burst=true;s.failCommit=true;s.recordings.add(audio(83,50));s.start();require(s.error!=null&&s.acks==0&&s.recordings.size()==1,"burst preserves original when phone storage fails");
+            s.failCommit=false;s.start();require(s.acks==1,"burst complete partial recovers after failed commit");cases++;
+        }
+        try(Sim s=new Sim()){
+            s.burst=true;s.lostAck=true;s.recordings.add(audio(84,50));s.start();s.start();require(s.acks==2&&s.saves==1&&s.recordings.isEmpty(),"burst lost ACK is deduplicated");cases++;
         }
         for(int code:new int[]{400,409,413,415})require(UploadPolicy.action(code)==UploadPolicy.Action.HOLD,"hold "+code);
         for(int code:new int[]{401,403,404,411})require(UploadPolicy.action(code)==UploadPolicy.Action.CONFIGURATION,"config "+code);

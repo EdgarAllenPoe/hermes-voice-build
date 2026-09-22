@@ -64,4 +64,4 @@ class ReviewMaintenanceTests(unittest.TestCase):
     def test_migration_is_repeatable_and_preserves_queue(self):
         before=self.s.get(self.mid)['audio'];s=Store(self.s.path);s=Store(self.s.path)
         self.assertEqual(s.get(self.mid)['audio'],before)
-        with s.connect() as db:self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],2)
+        with s.connect() as db:self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],3)

@@ -160,3 +160,16 @@ INFO is now 64 bytes. Offsets 0–31 retain the previous meanings. Capabilities 
 `GET /v1/messages/<canonical-lowercase-UUID>` uses the existing bearer token. Success (200) returns only `id`, `sha256`, `state`, `created`, and `updated`. Unknown IDs return 404; malformed IDs return 400. No audio, transcript, or Hermes result is returned. `/health` advertises `message_status: 1`.
 
 The Android client checks the ID and hash against its verified upload receipt before accepting a stage update. Failed status requests do not remove receipts or cause another upload. A completed worker handoff (`done`) is separate from proof of every downstream tool action. No remote deletion API is introduced.
+
+
+## Notification transport in firmware 0.5.0
+
+Capability bit 5 (`0x20`) advertises bounded bursts and recording-ready events. New characteristic `58ef0008-35c8-4c31-89aa-81f763051da1` supports notifications with an authenticated read/write CCC descriptor. The existing characteristic UUIDs and pull commands remain unchanged.
+
+After normal NEXT/META selection and subscribing, write control `[09, offset_u32, token_u32]` (9 bytes). The recorder snapshots the selected slot and sends at most 16 packets. Each data packet is `[01, token_u32, absolute_offset_u32, audio...]`. Its total length is at most `min(244, ATT_MTU-3)`. At MTU 247, up to 235 audio bytes fit. Token and offset are little-endian. A last packet can be short. A storage-read error sends `[03, token_u32, offset_u32]` without audio.
+
+The client accepts only its current token and next offset, tolerates already-consumed duplicates, rejects gaps/overflow, and requests the next window only after both the previous control-write response and all expected data arrive. Completion still validates the entire HVB1 file and durably commits it before ordinary UUID ACK. Disconnect or another control command cancels unsent burst work; late packets are harmless because tokens/state no longer match. The low-priority sender retains the connection while sending and never holds storage or connection locks while waiting for Bluetooth TX resources.
+
+A one-byte notification `[02]` announces that recorder work may be available. It carries no audio or message ID. The phone wakes its existing serialized transfer engine when idle, then reads fresh status and metadata. Polling remains a recovery path. Subscription and capability checks gate the optional transport; old firmware and clients keep the original pull protocol.
+
+Processing status can now contain optional `timings_ms` metadata with `queue_wait`, `transcribe`, `setup`, `hermes`, and `total`. Each value is a nonnegative integer duration. Older receipts may have no timings. Tokens, transcripts, audio and agent results remain excluded.

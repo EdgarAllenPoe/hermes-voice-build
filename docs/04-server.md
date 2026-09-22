@@ -160,3 +160,9 @@ User services may stop after logout unless the account is configured to remain a
 ## Version 0.3 review and maintenance
 
 Guide 10 documents show, edit, reject, storage and cleanup. Corrections preserve the first transcript, approval is explicit, and rejection never dispatches Hermes. Cleanup previews by default and applying it requires the worker to be stopped. The scheduler fairly selects the oldest eligible queued or ready transition. Existing review and uncertain items remain held.
+
+## Speed worker and transcription configuration
+
+The current worker uses a private local `worker-wakeup.sock` beside the queue database, with a 30-second fallback check. One lane transcribes; one lane dispatches Hermes. Dispatch waits for earlier queued/transcribing work, and only one Hermes action runs at a time. Review, failed, and uncertain messages still require their existing operator decisions. No extra worker service is needed. The schema-3 timing table is additive, and the authenticated message-status response may include `timings_ms` without message content.
+
+The generic presets retain automatic language detection and the multilingual model. For Tom's English installation, the verified local settings are `language: "en"`, the absolute path to `ggml-base.en.bin` as `whisper_model`, and `whisper_threads: 6`. Omitted `whisper_threads` defaults to four. Keep the previous model for rollback, and use a multilingual model if recording other languages. These settings require a worker restart; allow active delivery to finish first. See [measured results and controls](18-speed-improvements.md), including the difference between isolated model timing and a live request.

@@ -17,6 +17,15 @@ static struct bt_uuid_128 data_uuid=BT_UUID_INIT_128(UUID(4));
 static struct bt_uuid_128 info_uuid=BT_UUID_INIT_128(UUID(5));
 static struct bt_uuid_128 inventory_uuid=BT_UUID_INIT_128(UUID(6));
 static struct bt_uuid_128 config_uuid=BT_UUID_INIT_128(UUID(7));
+static struct bt_uuid_128 stream_uuid=BT_UUID_INIT_128(UUID(8));
+K_MUTEX_DEFINE(stream_lock);K_SEM_DEFINE(stream_wake,0,1);
+static uint32_t stream_generation,stream_token,stream_offset,stream_total;
+static int stream_slot=-1;static unsigned stream_remaining;static atomic_t ready_event;
+static void cancel_stream(void){k_mutex_lock(&stream_lock,K_FOREVER);stream_generation++;stream_remaining=0;k_mutex_unlock(&stream_lock);}
+void hvb_ble_recording_ready(void){atomic_set(&ready_event,1);k_sem_give(&stream_wake);}
+static void stream_ccc_changed(const struct bt_gatt_attr *attr,uint16_t value){
+    ARG_UNUSED(attr);if(value==BT_GATT_CCC_NOTIFY)hvb_ble_recording_ready();else cancel_stream();
+}
 static uint8_t inventory[454];static size_t inventory_len;
 static uint16_t skipped;
 static int selected=-1;static uint8_t meta[20],chunk[180];static size_t chunk_len;
@@ -45,9 +54,9 @@ static ssize_t read_data(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,
 static ssize_t read_info(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){
     uint8_t info[64]={1,0,0,0,0,0,0,0};info[1]=atomic_get(&hvb_recording)?1:0;
     info[2]=(uint8_t)hvb_store_count();sys_put_le16(hvb_battery_mv(),info+4);
-    info[8]=1;info[9]=0;info[10]=4;info[11]=0; /* diagnostic schema and firmware version */
+    info[8]=1;info[9]=0;info[10]=5;info[11]=0; /* diagnostic schema and firmware version */
     hvb_capture_diagnostics(info+12);hvb_store_diagnostics(info+24);
-    sys_put_le16(31,info+30); /* SKIP, inventory/delete, config, mic test, battery */
+    sys_put_le16(63,info+30); /* Previous controls plus bounded notifications/event wakeup. */
     hvb_live_diagnostics(info+32);
     return bt_gatt_attr_read(c,a,b,n,o,info,sizeof(info));
 }
@@ -62,9 +71,17 @@ static ssize_t write_config(struct bt_conn *c,const struct bt_gatt_attr *a,const
     if(atomic_get(&hvb_recording))return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
     if(hvb_config_set(v))return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);return n;
 }
+static bool can_stream(struct bt_conn *c);
 static ssize_t control(struct bt_conn *c,const struct bt_gatt_attr *a,const void *v,uint16_t n,uint16_t o,uint8_t flags){
     ARG_UNUSED(c);ARG_UNUSED(a);ARG_UNUSED(flags);const uint8_t *p=v;
     if(o||!n)return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    if(p[0]==9&&n==9&&selected>=0){
+        uint32_t pos=sys_get_le32(p+1),total=sys_get_le32(meta+16);
+        if(pos>=total||!can_stream(c))return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
+        k_mutex_lock(&stream_lock,K_FOREVER);stream_generation++;stream_token=sys_get_le32(p+5);stream_offset=pos;stream_total=total;stream_slot=selected;stream_remaining=16;k_mutex_unlock(&stream_lock);
+        k_sem_give(&stream_wake);return n;
+    }
+    cancel_stream();
     if(p[0]==5&&n==18){
         if(atomic_get(&hvb_recording)||hvb_store_delete(p[1],p+2))return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
         selected=-1;memset(meta,0,20);chunk_len=0;return n;
@@ -96,15 +113,50 @@ BT_GATT_SERVICE_DEFINE(voice_service,
     BT_GATT_CHARACTERISTIC(&data_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_data,NULL,NULL),
     BT_GATT_CHARACTERISTIC(&info_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_info,NULL,NULL),
     BT_GATT_CHARACTERISTIC(&inventory_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_inventory,NULL,NULL),
-    BT_GATT_CHARACTERISTIC(&config_uuid.uuid,BT_GATT_CHRC_READ|BT_GATT_CHRC_WRITE,BT_GATT_PERM_READ_AUTHEN|BT_GATT_PERM_WRITE_AUTHEN,read_config,write_config,NULL)
+    BT_GATT_CHARACTERISTIC(&config_uuid.uuid,BT_GATT_CHRC_READ|BT_GATT_CHRC_WRITE,BT_GATT_PERM_READ_AUTHEN|BT_GATT_PERM_WRITE_AUTHEN,read_config,write_config,NULL),
+    BT_GATT_CHARACTERISTIC(&stream_uuid.uuid,BT_GATT_CHRC_NOTIFY,BT_GATT_PERM_NONE,NULL,NULL,NULL),
+    BT_GATT_CCC(stream_ccc_changed,BT_GATT_PERM_READ_AUTHEN|BT_GATT_PERM_WRITE_AUTHEN)
 );
+static bool can_stream(struct bt_conn *c){return bt_gatt_is_subscribed(c,&voice_service.attrs[14],BT_GATT_CCC_NOTIFY);}
+static void stream_sender(void *a,void *b,void *unused){
+    ARG_UNUSED(a);ARG_UNUSED(b);ARG_UNUSED(unused);
+    while(true){
+        k_sem_take(&stream_wake,K_FOREVER);
+        while(true){
+            k_mutex_lock(&peer_lock,K_FOREVER);struct bt_conn *c=peer?bt_conn_ref(peer):NULL;k_mutex_unlock(&peer_lock);
+            if(!c)break;
+            if(!bt_gatt_is_subscribed(c,&voice_service.attrs[14],BT_GATT_CCC_NOTIFY)){bt_conn_unref(c);break;}
+            if(atomic_cas(&ready_event,1,0)){
+                uint8_t event=2;int rc=bt_gatt_notify(c,&voice_service.attrs[14],&event,1);
+                if(rc)atomic_set(&ready_event,1);
+                bt_conn_unref(c);if(rc)k_msleep(20);continue;
+            }
+            k_mutex_lock(&stream_lock,K_FOREVER);
+            unsigned remaining=stream_remaining;uint32_t generation=stream_generation,token=stream_token,pos=stream_offset,total=stream_total;int slot=stream_slot;
+            k_mutex_unlock(&stream_lock);
+            if(!remaining){bt_conn_unref(c);break;}
+            uint8_t packet[244];packet[0]=1;sys_put_le32(token,packet+1);sys_put_le32(pos,packet+5);
+            size_t capacity=MIN(sizeof(packet),(size_t)bt_gatt_get_mtu(c)-3);
+            size_t count=MIN(capacity-9,total-pos);
+            int rc=hvb_store_read(slot,pos,packet+9,count);
+            if(rc){packet[0]=3;count=0;}
+            int sent=bt_gatt_notify(c,&voice_service.attrs[14],packet,count+9);bt_conn_unref(c);
+            if(sent){k_msleep(10);continue;}
+            k_mutex_lock(&stream_lock,K_FOREVER);
+            if(generation==stream_generation){stream_offset+=count;if(rc||stream_offset>=stream_total)stream_remaining=0;else stream_remaining--;}
+            k_mutex_unlock(&stream_lock);
+        }
+    }
+}
+K_THREAD_DEFINE(stream_thread,2048,stream_sender,NULL,NULL,NULL,8,0,0);
+
 static void connected(struct bt_conn *c,uint8_t err){
     if(err)return;
     k_mutex_lock(&peer_lock,K_FOREVER);peer=bt_conn_ref(c);advertising=false;k_mutex_unlock(&peer_lock);
     skipped=0;selected=-1;chunk_len=0;memset(meta,0,20);bt_conn_set_security(c,BT_SECURITY_L4);
 }
 static void disconnected(struct bt_conn *c,uint8_t reason){
-    ARG_UNUSED(c);ARG_UNUSED(reason);hvb_mic_test(false);k_mutex_lock(&peer_lock,K_FOREVER);
+    ARG_UNUSED(c);ARG_UNUSED(reason);cancel_stream();hvb_mic_test(false);k_mutex_lock(&peer_lock,K_FOREVER);
     if(peer){bt_conn_unref(peer);peer=NULL;}selected=-1;k_mutex_unlock(&peer_lock);
 }
 BT_CONN_CB_DEFINE(callbacks)={.connected=connected,.disconnected=disconnected};

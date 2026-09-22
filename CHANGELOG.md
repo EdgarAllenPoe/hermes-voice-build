@@ -1,5 +1,9 @@
 # Change log
 
+## Android 0.6.0 / firmware 0.5.0 — September 22, 2026
+
+Added bounded BLE notification batches with token/offset validation, safe pull fallback and recording-ready events. Added local post-commit worker wakeups, concurrent transcription with serial ordered Hermes delivery, cached launcher checks, concise intake instructions, and content-free stage timing metadata. Selected English base.en with six CPU threads after a five-recording comparison. Preserved second-press immediate save, the configured automatic-save option, durable acknowledgements and existing pairing identity. Added a complete prompt for Hermes-specific speed work.
+
 ## Android 0.5.0 / firmware 0.4.0 — September 22, 2026
 
 Implemented recording history with authenticated server processing stages, guarded recorder/phone queue controls, automatic and manual reconnection, persistent silence/sensitivity/manual-save settings, measured battery/charging status and low-battery alert, save/transfer/error LED patterns, local playback with optional 24-hour delivered-audio retention, and a bounded microphone-level test that never saves or uploads audio. Added a backward-compatible 64-byte BLE INFO extension, inventory/configuration characteristics, and metadata-only server status endpoint. Database schema 3 preserves existing audio and receipts. Tests cover migrations, deletion guards, retention, codec playback, capture policy, and server authentication. See the current user guide and release verification for physical test results and remaining acceptance work.

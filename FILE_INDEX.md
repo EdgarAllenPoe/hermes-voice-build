@@ -28,6 +28,7 @@
 - SCONS_ADAPTER_FIX.md
 - SHA256SUMS.txt
 - SOURCES.md
+- SPEED_0.6.0_VERIFIED.md
 - START_HERE_BUILD_STATUS.md
 - TEST_REPORT.md
 - TEST_REPORT_v0.2.md
@@ -96,7 +97,9 @@
 - docs/15-single-press-recording.md
 - docs/16-charging-indicator.md
 - docs/17-recordings-and-controls.md
+- docs/18-speed-improvements.md
 - docs/HARDWARE-GUIDE.md
+- docs/HERMES-SPEED-OPTIMIZATION-PROMPT.md
 - docs/Hermes-Voice-Hardware-Guide-0.3.2.docx
 - docs/Hermes-Voice-Hardware-Guide-0.3.3.docx
 - docs/Hermes-Voice-Hardware-Guide.docx
@@ -138,6 +141,7 @@
 - receiver/hvbridge/maintenance.py
 - receiver/hvbridge/server.py
 - receiver/hvbridge/storage.py
+- receiver/hvbridge/wakeup.py
 - receiver/hvbridge/worker.py
 - receiver/install-user.sh
 - receiver/requirements.txt

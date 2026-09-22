@@ -6,7 +6,7 @@ import java.util.zip.CRC32;
 /** Pure Java protocol validation; tested independently of Android. */
 public final class Wire {
     public static final int MAX_FILE=492064;
-    public static final UUID SERVICE=uuid(1), CONTROL=uuid(2), META=uuid(3), DATA=uuid(4), INFO=uuid(5), INVENTORY=uuid(6), CONFIG=uuid(7);
+    public static final UUID SERVICE=uuid(1), CONTROL=uuid(2), META=uuid(3), DATA=uuid(4), INFO=uuid(5), INVENTORY=uuid(6), CONFIG=uuid(7), STREAM=uuid(8);
     public static UUID uuid(int n) { return UUID.fromString(String.format(Locale.ROOT,"58ef%04x-35c8-4c31-89aa-81f763051da1",n)); }
     public static String id(byte[] b,int off) {
         ByteBuffer v=ByteBuffer.wrap(b,off,16).order(ByteOrder.BIG_ENDIAN);

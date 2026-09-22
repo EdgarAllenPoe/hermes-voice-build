@@ -19,6 +19,7 @@ final class ProcessingStatus {
                     byte[] bytes;try(InputStream in=conn.getInputStream()){bytes=in.readNBytes(8193);}if(bytes.length>8192)throw new IOException("Oversized status");
                     JSONObject value=new JSONObject(new String(bytes,StandardCharsets.UTF_8));String state=value.getString("state");
                     if(!item[0].equals(value.getString("id"))||!item[1].equals(value.getString("sha256"))||!Set.of("queued","transcribing","review","ready","delivering","done","failed","uncertain","rejected").contains(state))throw new IOException("Invalid processing status");
+                    JSONObject timings=value.optJSONObject("timings_ms");if(timings!=null){StringBuilder timing=new StringBuilder(item[0].substring(0,8)+": ");for(String key:new String[]{"queue_wait","transcribe","setup","hermes","total"})if(timings.has(key)){long ms=timings.optLong(key,-1);if(ms>=0&&ms<=86_400_000)timing.append(key).append(": ").append(ms).append(" ms; ");}Settings.metric(c,"server_timing",timing.toString());}
                     db.serverStatus(item[0],state);Settings.metric(c,"processing_status","Message processing status checked");
                 }finally{conn.disconnect();}
             }

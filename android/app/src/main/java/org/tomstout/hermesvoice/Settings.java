@@ -71,7 +71,7 @@ final class Settings {
     static String diagnostics(Context c){
         SharedPreferences d=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE);
         StringBuilder out=new StringBuilder("Hermes Voice "+BuildConfig.VERSION_NAME+"\n");
-        for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload","battery","device_action","processing_status"}){
+        for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload","battery","device_action","processing_status","transfer_mode","last_transfer_ms","server_timing"}){
             String value=d.getString(key,"not available");
             if(key.equals("recorder")&&!value.equals("not available")){
                 long readAt=d.getLong("recorder_read_at",0);

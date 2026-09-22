@@ -1,7 +1,7 @@
 package org.tomstout.hermesvoice;
 /** Compatible with legacy 8-byte INFO and the 32-byte v1 diagnostic extension. */
 final class RecorderInfo {
-    final boolean skip;
+    final boolean skip,burst;
     final boolean enhanced,recording,lowBattery,manual;
     final int batteryMv,chargeState,currentMa,micState,level,peak,silenceMs,threshold,freeSlots;
     final long micFrames;
@@ -24,6 +24,7 @@ final class RecorderInfo {
         freeSlots=enhanced?b[49]&255:-1;micFrames=enhanced?Integer.toUnsignedLong(Wire.le32(b,52)):0;
         String base="Recorder queue: "+queued+"\nCapture active: "+(b[1]!=0)+
                     "\nBattery: "+(mv==0?"unavailable":mv+" mV");
+        burst=b.length>=32&&b[8]==1&&(b[30]&32)!=0;
         skip=b.length>=32&&b[8]==1&&(b[30]&1)!=0;
         quarantined=b.length>=32&&b[8]==1?((b[28]&255)|((b[29]&255)<<8)):0;
         errors=b.length>=32&&b[8]==1?Integer.toUnsignedLong(Wire.le32(b,12))+

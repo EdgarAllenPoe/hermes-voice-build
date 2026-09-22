@@ -36,6 +36,7 @@ int hvb_ble_init(void);
 void hvb_ble_pair_window(void);
 void hvb_ble_forget_phone(void);
 void hvb_ble_maintenance(void);
+void hvb_ble_recording_ready(void);
 uint16_t hvb_battery_mv(void);
 void hvb_led(unsigned red,unsigned green,unsigned blue);
 #endif

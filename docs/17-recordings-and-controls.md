@@ -1,6 +1,6 @@
 # Recordings and recorder controls
 
-Applies to Android **0.5.0** and XIAO nRF54LM20A Sense firmware **0.4.0**. Install the personal APK over the existing app; keep its data and Bluetooth bond. Older firmware can still transfer recordings, but the new recorder controls require firmware 0.4.0.
+Applies to Android **0.5.0 and later** and XIAO nRF54LM20A Sense firmware **0.4.0 and later**. See [the speed update](18-speed-improvements.md) for app 0.6.0 / firmware 0.5.0. Install the personal APK over the existing app; keep its data and Bluetooth bond. Older firmware can still transfer recordings, but the new recorder controls require firmware 0.4.0.
 
 ## Everyday use
 

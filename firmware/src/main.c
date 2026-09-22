@@ -44,7 +44,7 @@ static void render_led(void){
     }else if(!color&&atomic_get(&low_battery)&&now%10000<80)color=1;
     for(unsigned j=0;j<3;j++)gpio_pin_set_dt(&leds[j],(color&(1u<<j))!=0);
 }
-void hvb_signal(unsigned event){atomic_set(&led_event_at,k_uptime_get_32());atomic_set(&led_event,event);}
+void hvb_signal(unsigned event){if(event==HVB_SIGNAL_SAVED)hvb_ble_recording_ready();atomic_set(&led_event_at,k_uptime_get_32());atomic_set(&led_event,event);}
 int hvb_mic_test(bool start){
     if(start&&atomic_get(&hvb_recording))return -EBUSY;
     if(start){atomic_set(&mic_peak,0);atomic_set(&mic_frames,0);atomic_set(&mic_test_state,1);atomic_set(&mic_test_deadline,k_uptime_get_32()+60000);}

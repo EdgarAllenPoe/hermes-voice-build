@@ -20,7 +20,8 @@ class Store:
             columns = {row[1] for row in db.execute('PRAGMA table_info(messages)')}
             if 'original_transcript' not in columns:
                 db.execute('ALTER TABLE messages ADD COLUMN original_transcript TEXT')
-            db.execute('PRAGMA user_version=2')
+            db.execute('CREATE TABLE IF NOT EXISTS message_timings(id TEXT NOT NULL,stage TEXT NOT NULL,milliseconds INTEGER NOT NULL,PRIMARY KEY(id,stage))')
+            db.execute('PRAGMA user_version=3')
         self.path.chmod(0o600)
     @contextmanager
     def connect(self):
@@ -44,6 +45,7 @@ class Store:
             if used+len(data)>self.quota: raise QueueFull('Server queue quota reached')
             db.execute('INSERT INTO messages(id,sha256,audio,state,created,updated,flags) VALUES(?,?,?,?,?,?,?)',
                        (h.message_id,digest,data,'queued',now,now,h.flags))
+        self.wake()
         return h.message_id,digest,False
     def claim_work(self):
         # Oldest eligible transition wins, so neither transcription nor approved
@@ -57,6 +59,24 @@ class Store:
             next_state = 'transcribing' if row['state'] == 'queued' else 'delivering'
             db.execute('UPDATE messages SET state=?,updated=?,attempts=attempts+1 WHERE id=?',
                        (next_state,time.time(),row['id']))
+            return dict(row)
+
+    def wake(self):
+        from .wakeup import notify
+        notify(self.path)
+    def timing(self,mid,stage,seconds):
+        if stage not in {'transcribe','hermes','setup','queue_wait','total'}:raise ValueError('Unknown timing stage')
+        with self.connect() as db:
+            db.execute('INSERT OR REPLACE INTO message_timings VALUES(?,?,?)',(mid,stage,max(0,round(seconds*1000))))
+    def claim_delivery(self):
+        # One delivery lane preserves capture order while the transcription lane runs ahead.
+        # Review/failed/uncertain messages require an operator and do not block newer work.
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if db.execute("SELECT 1 FROM messages WHERE state='delivering' LIMIT 1").fetchone():return None
+            row=db.execute("SELECT * FROM messages WHERE state IN ('queued','transcribing','ready') ORDER BY created,id LIMIT 1").fetchone()
+            if not row or row['state']!='ready':return None
+            db.execute("UPDATE messages SET state='delivering',updated=?,attempts=attempts+1 WHERE id=?",(time.time(),row['id']))
             return dict(row)
 
     def claim(self,state:str,next_state:str):
@@ -74,6 +94,7 @@ class Store:
         with self.connect() as db:
             db.execute('UPDATE messages SET '+','.join(parts)+' WHERE id=?',
                        [state,time.time(),*values.values(),mid])
+        self.wake()
     def recover(self):
         with self.connect() as db:
             db.execute("UPDATE messages SET state='queued',error='Transcription interrupted; safe retry' WHERE state='transcribing'")
@@ -108,6 +129,7 @@ class Store:
                              "WHERE id=? AND state='review'",(time.time(),mid))
             if not cur.rowcount:
                 raise ValueError('Only a message awaiting review can be rejected')
+        self.wake()
 
     def report(self):
         with self.connect() as db:
@@ -136,6 +158,8 @@ class Store:
         with self.connect() as db:
             cur=db.execute("UPDATE messages SET state='ready',updated=? WHERE id=? AND state='review'",(time.time(),mid))
             if not cur.rowcount: raise ValueError('Message is not awaiting review')
+        self.wake()
+
     def retry(self,mid:str,allow_uncertain=False):
         with self.connect() as db:
             row=db.execute('SELECT state,transcript FROM messages WHERE id=?',(mid,)).fetchone()
@@ -145,6 +169,8 @@ class Store:
             if row['state'] not in ('failed','uncertain'): raise ValueError('Message is not retryable')
             db.execute('UPDATE messages SET state=?,error=NULL,updated=? WHERE id=?',
                        ('ready' if row['transcript'] else 'queued',time.time(),mid))
+        self.wake()
+
     def purge_audio(self,days:int):
         if days<1: raise ValueError('Retention must be at least one day')
         with self.connect() as db:
@@ -156,4 +182,8 @@ class Store:
         """Authenticated receipt status; deliberately excludes audio and agent output."""
         with self.connect() as db:
             row=db.execute('SELECT id,sha256,state,created,updated FROM messages WHERE id=?',(mid,)).fetchone()
-            return dict(row) if row else None
+            if not row:return None
+            result=dict(row)
+            timings={r[0]:r[1] for r in db.execute('SELECT stage,milliseconds FROM message_timings WHERE id=?',(mid,))}
+            if timings:result['timings_ms']=timings
+            return result

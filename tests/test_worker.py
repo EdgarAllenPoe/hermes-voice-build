@@ -33,3 +33,32 @@ class WorkerTests(unittest.TestCase):
  def test_hermes_capability_check(self):
   self.cfg['hermes_executable']=str(self.executable('old-agent',"print('wrong CLI')\n"))
   with self.assertRaises(ValueError):check_hermes(self.cfg)
+
+ def test_processing_timings_are_metadata_only(self):
+  self.cfg['delivery_mode']='auto';once(self.s,self.cfg,self.work);once(self.s,self.cfg,self.work)
+  status=self.s.delivery_status(self.mid);self.assertEqual(status['state'],'done');self.assertIn('transcribe',status['timings_ms']);self.assertIn('hermes',status['timings_ms']);self.assertNotIn('transcript',status)
+ def test_delivery_waits_for_earlier_transcription(self):
+  import uuid
+  second=self.s.ingest(make_container([100]*320,mid=str(uuid.uuid4())))[0]
+  self.s.set(second,'ready',transcript='second');self.assertIsNone(self.s.claim_delivery())
+  self.s.set(self.mid,'ready',transcript='first');self.assertEqual(self.s.claim_delivery()['id'],self.mid);self.assertIsNone(self.s.claim_delivery())
+ def test_pipeline_transcribes_while_hermes_is_busy(self):
+  import threading,time,uuid
+  from hvbridge.worker import loop
+  marker=self.p/'agent-started';release=self.p/'release-agent'
+  body="import pathlib,sys,time\nif '--help' in sys.argv:print('--query-file');sys.exit(0)\npathlib.Path("+repr(str(marker))+").touch()\nwhile not pathlib.Path("+repr(str(release))+").exists():time.sleep(.01)\nprint('synthetic completed')\n"
+  self.cfg['hermes_executable']=str(self.executable('waiting-agent',body));self.cfg['delivery_mode']='auto'
+  stop=threading.Event();worker=threading.Thread(target=loop,args=(self.s,self.cfg,self.work,stop));worker.start()
+  def wait_for(test):
+   until=time.monotonic()+8
+   while not test():
+    if time.monotonic()>until:raise AssertionError('Pipeline timed out')
+    time.sleep(.02)
+  try:
+   wait_for(marker.exists)
+   second=self.s.ingest(make_container([200]*320,mid=str(uuid.uuid4())))[0]
+   wait_for(lambda:self.s.get(second)['state']=='ready')
+   self.assertEqual(self.s.get(self.mid)['state'],'delivering');self.assertFalse((self.work/second/'hermes.log').exists())
+   release.touch();wait_for(lambda:self.s.get(second)['state']=='done')
+  finally:release.touch();stop.set();self.s.wake();worker.join(10)
+  self.assertFalse(worker.is_alive())
