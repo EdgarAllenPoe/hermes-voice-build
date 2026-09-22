@@ -1,0 +1,15 @@
+package org.tomstout.hermesvoice;
+import android.app.*;import android.content.*;import android.graphics.*;import android.os.*;import android.view.*;import android.widget.*;
+import androidx.test.platform.app.InstrumentationRegistry;import androidx.test.ext.junit.runners.AndroidJUnit4;
+import org.junit.*;import org.junit.runner.RunWith;import java.io.*;import static org.junit.Assert.*;
+@RunWith(AndroidJUnit4.class)
+public class ToolsActivityTest {
+ Context c;Instrumentation ins;Activity activity;
+ @Before public void setup(){ins=InstrumentationRegistry.getInstrumentation();c=ins.getTargetContext();assertTrue(c.getPackageName().endsWith(".ci"));c.getSharedPreferences("settings",0).edit().clear().commit();c.getSharedPreferences("diagnostics",0).edit().clear().commit();c.deleteDatabase("voice_queue.db");c.getSystemService(UiModeManager.class).setApplicationNightMode(UiModeManager.MODE_NIGHT_NO);SystemClock.sleep(300);}
+ @After public void finish(){if(activity!=null)ins.runOnMainSync(()->activity.finish());ins.waitForIdleSync();}
+ private void launch(Class<?> type){activity=ins.startActivitySync(new Intent(c,type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));ins.waitForIdleSync();SystemClock.sleep(600);}
+ private void capture(String name)throws Exception{File dir=new File(c.getFilesDir(),"feature-screenshots");assertTrue(dir.isDirectory()||dir.mkdirs());final Bitmap[] result=new Bitmap[1];ins.runOnMainSync(()->{View view=activity.getWindow().getDecorView();assertTrue(view.getWidth()>0&&view.getHeight()>0);result[0]=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);view.draw(new Canvas(result[0]));});try(FileOutputStream out=new FileOutputStream(new File(dir,name+".png"))){assertTrue(result[0].compress(Bitmap.CompressFormat.PNG,100,out));}result[0].recycle();}
+ private boolean hasText(View v,String label){if(v instanceof TextView&&((TextView)v).getText().toString().contains(label))return true;if(v instanceof ViewGroup){ViewGroup group=(ViewGroup)v;for(int i=0;i<group.getChildCount();i++)if(hasText(group.getChildAt(i),label))return true;}return false;}
+ @Test public void historyShowsReceiptAndRetentionControls()throws Exception{QueueDbTest helper=new QueueDbTest();byte[] b=helper.audio(40);try(QueueDb db=new QueueDb(c)){db.accept(b);}launch(RecordingsActivity.class);assertTrue(hasText(activity.getWindow().getDecorView(),"Saved on phone"));assertTrue(hasText(activity.getWindow().getDecorView(),"Keep delivered audio"));capture("history-light");}
+ @Test public void recorderControlsHaveSettingsAndSafeDisconnectedState()throws Exception{launch(RecorderToolsActivity.class);assertTrue(hasText(activity.getWindow().getDecorView(),"Recorder disconnected"));assertTrue(hasText(activity.getWindow().getDecorView(),"Start microphone test"));assertTrue(hasText(activity.getWindow().getDecorView(),"Clear recorder queue"));capture("recorder-controls-light");ins.runOnMainSync(()->((ScrollView)((ToolScreen)activity).page.getParent()).fullScroll(View.FOCUS_DOWN));ins.waitForIdleSync();capture("recorder-controls-bottom");}
+}

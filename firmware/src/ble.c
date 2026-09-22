@@ -1,6 +1,7 @@
 /* Encrypted, authenticated BLE pull protocol. See docs/05-protocol.md. */
 #include "hvb.h"
 #include "device_config.h"
+#include "recorder_config.h"
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -14,6 +15,9 @@ static struct bt_uuid_128 ctrl_uuid=BT_UUID_INIT_128(UUID(2));
 static struct bt_uuid_128 meta_uuid=BT_UUID_INIT_128(UUID(3));
 static struct bt_uuid_128 data_uuid=BT_UUID_INIT_128(UUID(4));
 static struct bt_uuid_128 info_uuid=BT_UUID_INIT_128(UUID(5));
+static struct bt_uuid_128 inventory_uuid=BT_UUID_INIT_128(UUID(6));
+static struct bt_uuid_128 config_uuid=BT_UUID_INIT_128(UUID(7));
+static uint8_t inventory[454];static size_t inventory_len;
 static uint16_t skipped;
 static int selected=-1;static uint8_t meta[20],chunk[180];static size_t chunk_len;
 static struct bt_conn *peer;static bool advertising;static int64_t pair_until;
@@ -34,21 +38,38 @@ static const struct bt_data sd[]={BT_DATA(BT_DATA_NAME_COMPLETE,"Hermes Voice",1
  * Nearby scanners can recognize this identity; that privacy tradeoff is documented. */
 static const struct bt_le_adv_param advertising_parameters = BT_LE_ADV_PARAM_INIT(
     BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY,
-    BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL);
+    1600, 1920, NULL); /* 1.0-1.2 s standby discovery; bonded status remains reachable. */
 
 static ssize_t read_meta(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){return bt_gatt_attr_read(c,a,b,n,o,meta,sizeof(meta));}
 static ssize_t read_data(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){return bt_gatt_attr_read(c,a,b,n,o,chunk,chunk_len);}
 static ssize_t read_info(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){
-    uint8_t info[32]={1,0,0,0,0,0,0,0};info[1]=atomic_get(&hvb_recording)?1:0;
+    uint8_t info[64]={1,0,0,0,0,0,0,0};info[1]=atomic_get(&hvb_recording)?1:0;
     info[2]=(uint8_t)hvb_store_count();sys_put_le16(hvb_battery_mv(),info+4);
-    info[8]=1;info[9]=0;info[10]=3;info[11]=3; /* diagnostic schema and firmware version */
+    info[8]=1;info[9]=0;info[10]=4;info[11]=0; /* diagnostic schema and firmware version */
     hvb_capture_diagnostics(info+12);hvb_store_diagnostics(info+24);
-    sys_put_le16(1,info+30); /* capability bit 0: connection-local SKIP */
+    sys_put_le16(31,info+30); /* SKIP, inventory/delete, config, mic test, battery */
+    hvb_live_diagnostics(info+32);
     return bt_gatt_attr_read(c,a,b,n,o,info,sizeof(info));
+}
+static ssize_t read_inventory(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){
+    if(!o)inventory_len=hvb_store_inventory(inventory);
+    return bt_gatt_attr_read(c,a,b,n,o,inventory,inventory_len);
+}
+static ssize_t read_config(struct bt_conn *c,const struct bt_gatt_attr *a,void *b,uint16_t n,uint16_t o){uint8_t cfg[6];hvb_config_bytes(cfg);return bt_gatt_attr_read(c,a,b,n,o,cfg,6);}
+static ssize_t write_config(struct bt_conn *c,const struct bt_gatt_attr *a,const void *v,uint16_t n,uint16_t o,uint8_t flags){
+    ARG_UNUSED(c);ARG_UNUSED(a);ARG_UNUSED(flags);
+    if(o||n!=6)return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    if(atomic_get(&hvb_recording))return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    if(hvb_config_set(v))return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);return n;
 }
 static ssize_t control(struct bt_conn *c,const struct bt_gatt_attr *a,const void *v,uint16_t n,uint16_t o,uint8_t flags){
     ARG_UNUSED(c);ARG_UNUSED(a);ARG_UNUSED(flags);const uint8_t *p=v;
     if(o||!n)return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    if(p[0]==5&&n==18){
+        if(atomic_get(&hvb_recording)||hvb_store_delete(p[1],p+2))return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
+        selected=-1;memset(meta,0,20);chunk_len=0;return n;
+    }
+    if(p[0]==8&&n==2&&p[1]<=1){if(hvb_mic_test(p[1]))return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);return n;}
     if(p[0]==1&&n==1){selected=hvb_store_next(meta,skipped);chunk_len=0;return n;}
     if(p[0]==2&&n==5&&selected>=0){
         uint32_t pos=sys_get_le32(p+1),total=sys_get_le32(meta+16);
@@ -64,7 +85,7 @@ static ssize_t control(struct bt_conn *c,const struct bt_gatt_attr *a,const void
     }
     if(p[0]==3&&n==17&&selected>=0){
         if(hvb_store_ack(selected,p+1))return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
-        selected=-1;memset(meta,0,20);chunk_len=0;return n;
+        selected=-1;memset(meta,0,20);chunk_len=0;hvb_signal(HVB_SIGNAL_TRANSFERRED);return n;
     }
     return BT_GATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED);
 }
@@ -73,7 +94,9 @@ BT_GATT_SERVICE_DEFINE(voice_service,
     BT_GATT_CHARACTERISTIC(&ctrl_uuid.uuid,BT_GATT_CHRC_WRITE,BT_GATT_PERM_WRITE_AUTHEN,NULL,control,NULL),
     BT_GATT_CHARACTERISTIC(&meta_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_meta,NULL,NULL),
     BT_GATT_CHARACTERISTIC(&data_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_data,NULL,NULL),
-    BT_GATT_CHARACTERISTIC(&info_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_info,NULL,NULL)
+    BT_GATT_CHARACTERISTIC(&info_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_info,NULL,NULL),
+    BT_GATT_CHARACTERISTIC(&inventory_uuid.uuid,BT_GATT_CHRC_READ,BT_GATT_PERM_READ_AUTHEN,read_inventory,NULL,NULL),
+    BT_GATT_CHARACTERISTIC(&config_uuid.uuid,BT_GATT_CHRC_READ|BT_GATT_CHRC_WRITE,BT_GATT_PERM_READ_AUTHEN|BT_GATT_PERM_WRITE_AUTHEN,read_config,write_config,NULL)
 );
 static void connected(struct bt_conn *c,uint8_t err){
     if(err)return;
@@ -81,7 +104,7 @@ static void connected(struct bt_conn *c,uint8_t err){
     skipped=0;selected=-1;chunk_len=0;memset(meta,0,20);bt_conn_set_security(c,BT_SECURITY_L4);
 }
 static void disconnected(struct bt_conn *c,uint8_t reason){
-    ARG_UNUSED(c);ARG_UNUSED(reason);k_mutex_lock(&peer_lock,K_FOREVER);
+    ARG_UNUSED(c);ARG_UNUSED(reason);hvb_mic_test(false);k_mutex_lock(&peer_lock,K_FOREVER);
     if(peer){bt_conn_unref(peer);peer=NULL;}selected=-1;k_mutex_unlock(&peer_lock);
 }
 BT_CONN_CB_DEFINE(callbacks)={.connected=connected,.disconnected=disconnected};
@@ -103,12 +126,14 @@ void hvb_ble_forget_phone(void){
     bt_unpair(BT_ID_DEFAULT,BT_ADDR_LE_ANY);hvb_ble_pair_window();
 }
 void hvb_ble_maintenance(void){
-    bool want=hvb_store_count()>0||pairing_open();
+    static bool slow;bool idle=!hvb_store_count()&&!atomic_get(&hvb_recording);
     k_mutex_lock(&peer_lock,K_FOREVER);
-    if(want&&!peer&&!advertising){int rc=bt_le_adv_start(&advertising_parameters,ad,ARRAY_SIZE(ad),sd,ARRAY_SIZE(sd));if(!rc||rc==-EALREADY)advertising=true;}
-    if(!want){
-        if(advertising){bt_le_adv_stop();advertising=false;}
-        if(peer)bt_conn_disconnect(peer,BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+    if(!peer&&!advertising){int rc=bt_le_adv_start(&advertising_parameters,ad,ARRAY_SIZE(ad),sd,ARRAY_SIZE(sd));if(!rc||rc==-EALREADY)advertising=true;}
+    if(peer&&idle!=slow){
+        struct bt_le_conn_param p=idle?(struct bt_le_conn_param)BT_LE_CONN_PARAM_INIT(160,200,2,600):
+            (struct bt_le_conn_param)BT_LE_CONN_PARAM_INIT(12,24,0,400);
+        if(!bt_conn_le_param_update(peer,&p))slow=idle;
     }
+    if(!peer)slow=false;
     k_mutex_unlock(&peer_lock);
 }

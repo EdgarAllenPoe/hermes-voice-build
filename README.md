@@ -2,9 +2,9 @@
 
 ## Current app and recorder
 
-Android **0.4.0** adds an accessible two-tab interface: an everyday Status screen with green/yellow/red indicators, and a Diagnostics screen for setup and troubleshooting. It follows the phone's light/dark setting, refreshes while visible, labels stale recorder readings, and requires recent evidence before showing a healthy server. The personal APK uses a non-debuggable release build and the retained signing identity. See [the Android guide](docs/03-android.md) and [the release verification record](APK_v0.4.0_VERIFIED.md).
+Android **0.5.0** and firmware **0.4.0** add recording history with server processing stages, confirmed queue controls, reconnect, persistent capture settings, charging diagnostics, distinct LED patterns, phone playback with optional 24-hour retention, and a live microphone test. Start with [the current user guide](docs/17-recordings-and-controls.md) and [release verification](FEATURES_0.5.0_VERIFIED.md).
 
-Firmware **0.3.3** is built, flashed and readback-verified on the personal recorder. It adds the dedicated red charging indicator to the single-tap recording and two-second silence controls. See [charging LED behavior and verification](docs/16-charging-indicator.md). The preceding firmware was commissioned for microphone capture, Bluetooth transfer and server delivery. The connected PKCELL battery subsequently reported about 4.02 V and 104 mA charging with no charger error; a complete charge cycle and battery-only acceptance remain pending.
+The personal app was updated in place on the Pixel 9 Pro XL, preserving its data and signing identity. The firmware was flashed to the personal XIAO nRF54LM20A Sense, with every HEX image byte verified by direct readback and the existing pairing identity retained. Connected status, settings changes/readback, live microphone frames without saved audio, and reconnect were tested on both devices. Extended battery, radio-range, and screen-lock acceptance remain open. The existing dedicated charging LED configuration remains unchanged; see [its commissioning record](docs/16-charging-indicator.md).
 
 The printable workshop manual is [Hermes Voice Hardware Guide](docs/Hermes-Voice-Hardware-Guide-0.3.3.docx), with a [browsable text version](docs/HARDWARE-GUIDE.md). Earlier version reports remain available as historical records; current app behavior is described in the Android guide.
 
@@ -18,7 +18,7 @@ The selected personal test build is [GitHub Actions run 34752997335](https://git
 
 The actual APK and private firmware were downloaded and verified after the build. The encrypted private artifacts were successfully decrypted using the newly backed-up private recovery key. The Android signing-key backup was recovered and its certificate matches the delivered APK. Firmware HEX, BIN and ELF program contents agree, and the pairing card matches its generated configuration.
 
-**These are compiled prototype test binaries, not physically validated releases.** There has been no installation, flashing, microphone, Bluetooth, locked-phone, charger, or battery acceptance test on the user's devices.
+**At the original September 13 delivery**, these were compiled prototype binaries without physical validation. Subsequent installation and commissioning are recorded above; the historical report does not describe current test coverage.
 
 See [VERIFIED_BUILD.md](VERIFIED_BUILD.md) for selected file hashes, toolchain details and verification results. See [INSTALL_COMPILED_KIT.md](INSTALL_COMPILED_KIT.md) for setup and private-artifact handling. The repository's earlier “firmware still unresolved” status is superseded by this successful run; earlier build records are preserved.
 
@@ -26,7 +26,7 @@ See [VERIFIED_BUILD.md](VERIFIED_BUILD.md) for selected file hashes, toolchain d
 
 The Android receiver endpoint is prefilled as `http://100.99.200.55:8765/v1/voice` and remains editable. No server bearer token is baked into the APK. Generate that token on the Hermes host and enter it privately during app setup. Receiver commissioning remains **review-first**; these builds do not deploy or start a receiver or invoke Hermes.
 
-Android baseline: JDK 17, Gradle 8.11.1, AGP 8.10.1, compile/target SDK 36, minimum SDK 33. The current personal app package remains org.tomstout.hermesvoice, version 0.4.0 / version code 6. The sideloaded release APK is not debuggable. It retains the original signing key so installation can update the existing app in place. This project does not publish through the Play Store.
+Android baseline: JDK 17, Gradle 8.11.1, AGP 8.10.1, compile/target SDK 36, minimum SDK 33. The current personal app package remains org.tomstout.hermesvoice, version 0.5.0 / version code 7. The sideloaded release APK is not debuggable. It retains the original signing key so installation can update the existing app in place. This project does not publish through the Play Store.
 
 Seeed PlatformIO distribution pinned to **`1ec1287f8e4bc4067a6fd593991e36875aef989f`**. The working board integration, SCons adapter and BLE compiler fixes are documented in `BOARD_INTEGRATION_NOTES.md`, `SCONS_ADAPTER_FIX.md`, and `BLE_BUILD_FIX.md`. The actual system rail is `vsys_3v3`; the obsolete original `power_en` assumption must not be restored.
 

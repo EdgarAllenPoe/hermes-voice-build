@@ -17,6 +17,7 @@
 - BUILD_NOTES.md
 - Build-All.ps1
 - CHANGELOG.md
+- FEATURES_0.5.0_VERIFIED.md
 - FILE_INDEX.md
 - HANDOVER-2026-09-13.md
 - INSTALL_COMPILED_KIT.md
@@ -38,7 +39,10 @@
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/PairingAddressTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/QueueDbTest.java
 - android/app/src/androidTest/java/org/tomstout/hermesvoice/RecorderStatusTest.java
+- android/app/src/androidTest/java/org/tomstout/hermesvoice/ToolsActivityTest.java
 - android/app/src/main/AndroidManifest.xml
+- android/app/src/main/java/org/tomstout/hermesvoice/AudioDecoder.java
+- android/app/src/main/java/org/tomstout/hermesvoice/AudioPlayback.java
 - android/app/src/main/java/org/tomstout/hermesvoice/BootReceiver.java
 - android/app/src/main/java/org/tomstout/hermesvoice/CompanionService.java
 - android/app/src/main/java/org/tomstout/hermesvoice/DashboardReader.java
@@ -46,12 +50,19 @@
 - android/app/src/main/java/org/tomstout/hermesvoice/Endpoint.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Feedback.java
 - android/app/src/main/java/org/tomstout/hermesvoice/MainActivity.java
+- android/app/src/main/java/org/tomstout/hermesvoice/PhoneQueueActions.java
+- android/app/src/main/java/org/tomstout/hermesvoice/ProcessingStatus.java
 - android/app/src/main/java/org/tomstout/hermesvoice/QueueDb.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RecorderInfo.java
+- android/app/src/main/java/org/tomstout/hermesvoice/RecorderInventory.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RecorderStatus.java
+- android/app/src/main/java/org/tomstout/hermesvoice/RecorderToolsActivity.java
+- android/app/src/main/java/org/tomstout/hermesvoice/RecordingsActivity.java
 - android/app/src/main/java/org/tomstout/hermesvoice/RelayService.java
+- android/app/src/main/java/org/tomstout/hermesvoice/RetentionJob.java
 - android/app/src/main/java/org/tomstout/hermesvoice/ServerHealth.java
 - android/app/src/main/java/org/tomstout/hermesvoice/Settings.java
+- android/app/src/main/java/org/tomstout/hermesvoice/ToolScreen.java
 - android/app/src/main/java/org/tomstout/hermesvoice/TransferEngine.java
 - android/app/src/main/java/org/tomstout/hermesvoice/UploadJob.java
 - android/app/src/main/java/org/tomstout/hermesvoice/UploadPolicy.java
@@ -84,6 +95,7 @@
 - docs/14-microphone-commissioning.md
 - docs/15-single-press-recording.md
 - docs/16-charging-indicator.md
+- docs/17-recordings-and-controls.md
 - docs/HARDWARE-GUIDE.md
 - docs/Hermes-Voice-Hardware-Guide-0.3.2.docx
 - docs/Hermes-Voice-Hardware-Guide-0.3.3.docx
@@ -104,6 +116,8 @@
 - firmware/src/device_config.example.h
 - firmware/src/hvb.h
 - firmware/src/main.c
+- firmware/src/recorder_config.c
+- firmware/src/recorder_config.h
 - firmware/src/storage.c
 - firmware/zephyr/CMakeLists.txt
 - firmware/zephyr/app.overlay
@@ -130,6 +144,7 @@
 - receiver/systemd/hermes-voice-receiver.service
 - receiver/systemd/hermes-voice-worker.service
 - tests/DashboardStateTest.java
+- tests/RecorderFeaturesTest.java
 - tests/RelayEngineTest.java
 - tests/WireTest.java
 - tests/host_shim/storage_harness.c
@@ -155,6 +170,7 @@
 - tests/test_native_codec.py
 - tests/test_pio_adapter_patch.py
 - tests/test_provision.py
+- tests/test_recorder_features.py
 - tests/test_review_maintenance.py
 - tests/test_speech_evaluation.py
 - tests/test_storage_http.py

@@ -1,5 +1,9 @@
 # Change log
 
+## Android 0.5.0 / firmware 0.4.0 — September 22, 2026
+
+Implemented recording history with authenticated server processing stages, guarded recorder/phone queue controls, automatic and manual reconnection, persistent silence/sensitivity/manual-save settings, measured battery/charging status and low-battery alert, save/transfer/error LED patterns, local playback with optional 24-hour delivered-audio retention, and a bounded microphone-level test that never saves or uploads audio. Added a backward-compatible 64-byte BLE INFO extension, inventory/configuration characteristics, and metadata-only server status endpoint. Database schema 3 preserves existing audio and receipts. Tests cover migrations, deletion guards, retention, codec playback, capture policy, and server authentication. See the current user guide and release verification for physical test results and remaining acceptance work.
+
 ## v0.1 — September 12, 2026
 
 Initial complete custom-source package: C recorder firmware, native Java Android relay, Python bridge and worker, private protocol, durable queues, provisioning/build helpers, 56 host tests, documentation and printable copies.

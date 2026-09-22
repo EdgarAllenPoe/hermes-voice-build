@@ -43,6 +43,10 @@ final class Settings {
         if(fullRead)edit.putLong("recorder_read_at",System.currentTimeMillis());
         if(status.info()!=null)edit.putInt("recorder_quarantined",status.info().quarantined)
             .putLong("recorder_errors",status.info().errors);
+        if(status.info()!=null&&status.info().enhanced){RecorderInfo i=status.info();edit.putBoolean("enhanced",true).putString("battery",i.batteryText()).putBoolean("low_battery",i.lowBattery)
+            .putInt("charge_state",i.chargeState).putInt("mic_state",i.micState).putInt("mic_level",i.level).putInt("mic_peak",i.peak).putLong("mic_frames",i.micFrames)
+            .putInt("silence_ms",i.silenceMs).putInt("threshold",i.threshold).putBoolean("manual",i.manual).putInt("free_slots",i.freeSlots);}
+        else edit.putBoolean("enhanced",false);
         edit.apply();
     }
     static synchronized void saveServer(Context c,String address,String secret)throws Exception{
@@ -67,7 +71,7 @@ final class Settings {
     static String diagnostics(Context c){
         SharedPreferences d=c.getSharedPreferences("diagnostics",Context.MODE_PRIVATE);
         StringBuilder out=new StringBuilder("Hermes Voice "+BuildConfig.VERSION_NAME+"\n");
-        for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload"}){
+        for(String key:new String[]{"connection","transfer","mtu","recorder","recorder_problem","last_upload","battery","device_action","processing_status"}){
             String value=d.getString(key,"not available");
             if(key.equals("recorder")&&!value.equals("not available")){
                 long readAt=d.getLong("recorder_read_at",0);

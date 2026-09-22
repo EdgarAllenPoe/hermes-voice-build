@@ -65,3 +65,17 @@ class FlashSimulationTests(unittest.TestCase):
   self.c.test_erase_error(1);self.c.hvb_store_gc_step()
   diag=self.B(6)();self.c.hvb_store_diagnostics(diag)
   self.assertEqual(self.c.test_state(slot),5);self.assertGreater(diag[0],0);self.assertEqual(diag[4],1)
+
+ def test_inventory_and_guarded_operator_delete_persist_after_reboot(self):
+  slot=self.recording();inventory=self.B(454)();self.assertEqual(self.c.hvb_store_inventory(inventory),34)
+  self.assertEqual(bytes(inventory[:4]),bytes([1,1,0,0]));self.assertEqual(inventory[4],slot)
+  wrong=self.B(16)();self.assertNotEqual(self.c.hvb_store_delete(slot,wrong),0);self.assertEqual(self.c.hvb_store_count(),1)
+  recording_id=self.B(16)(*inventory[6:22]);self.assertEqual(self.c.hvb_store_delete(slot,recording_id),0)
+  self.c.test_reboot();self.assertEqual(self.c.hvb_store_init(),0);self.assertEqual(self.c.hvb_store_count(),0)
+ def test_delete_cannot_remove_active_or_reused_slot(self):
+  slot=self.c.hvb_store_begin(self.B(64)());self.assertNotEqual(self.c.hvb_store_delete(slot,self.B(16)()),0)
+  self.assertEqual(self.c.test_state(slot),2)
+ def test_operator_can_discard_quarantined_slot(self):
+  slot=self.recording();self.c.test_flip(slot,64);self.c.test_reboot();self.c.hvb_store_init();inventory=self.B(454)();self.c.hvb_store_inventory(inventory)
+  self.assertEqual(inventory[5],1);self.assertEqual(self.c.hvb_store_delete(slot,self.B(16)(*inventory[6:22])),0)
+  self.c.test_reboot();self.c.hvb_store_init();self.assertEqual(self.c.hvb_store_count(),0);self.assertNotEqual(self.c.test_state(slot),5)

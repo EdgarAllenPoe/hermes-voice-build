@@ -17,7 +17,74 @@ public final class RelayService extends Service {
     private Handler handler;
     private final ExecutorService upload=Executors.newSingleThreadExecutor();
     private BluetoothGatt gatt;
-    private BluetoothGattCharacteristic ctrl,meta,data,info;
+    private BluetoothGattCharacteristic ctrl,meta,data,info,catalog,config;
+    private RecorderInfo latestInfo;
+    private String pendingAction,activeAction;
+    private byte[] actionPayload;
+    private int actionOffset;
+    private boolean catalogRead,directConnect,stopTestAfterAction;
+    private int failures;
+    static void action(Context c,String name,byte[] payload){
+        if(!Settings.enabled(c)){Settings.metric(c,"device_action","Start the relay first");return;}
+        Intent i=new Intent(c,RelayService.class).setAction(name);if(payload!=null)i.putExtra("payload",payload);
+        c.startForegroundService(i);
+    }
+    private void requestAction(String name,byte[] payload){
+        if(name.equals("reconnect")){
+            pendingAction=activeAction=null;handler.removeCallbacks(next);deadline=0;closeConnection();directConnect=true;
+            Settings.metric(this,"device_action","Reconnecting to recorder\u2026");connect();return;
+        }
+        if(name.equals("clear_partials")){
+            pendingAction=activeAction=null;handler.removeCallbacks(next);deadline=0;closeConnection();
+            try{File directory=new File(getFilesDir(),"incoming").getCanonicalFile();File[] files=directory.listFiles();int count=0;
+                if(files!=null)for(File f:files){if(!f.getCanonicalFile().getParentFile().equals(directory)||!f.isFile()||!(f.getName().endsWith(".part")||f.getName().endsWith(".bad")))continue;
+                    if(!f.delete())throw new IOException("Cannot remove unfinished transfer");count++;}
+                Settings.metric(this,"transfer","Unfinished transfers cleared");Settings.metric(this,"device_action","Deleted "+count+" unfinished phone transfer(s). Recorder originals remain.");
+            }catch(Exception e){Settings.metric(this,"device_action","Cleanup failed; remaining files retained");}
+            connect();return;
+        }
+        if(name.equals("mic_stop")&&(pendingAction!=null||activeAction!=null)){stopTestAfterAction=true;return;}
+        if(pendingAction!=null||activeAction!=null){Settings.metric(this,"device_action","Another recorder operation is in progress");return;}
+        if(!connected||latestInfo==null){Settings.metric(this,"device_action","Recorder not connected. Reconnect and try again.");return;}
+        if(!latestInfo.enhanced){Settings.metric(this,"device_action","This control requires recorder firmware 0.4.0 or newer");return;}
+        pendingAction=name;actionPayload=payload;actionOffset=0;Settings.metric(this,"device_action","Working: "+name.replace('_',' '));
+        if(deadline==0)beginAction();
+    }
+    private boolean beginAction(){
+        if(pendingAction==null)return false;
+        activeAction=pendingAction;pendingAction=null;handler.removeCallbacks(next);
+        try{engine.disconnected();}catch(IOException e){fail("Could not pause transfer safely");return true;}
+        if(activeAction.equals("refresh"))read(info);else sendAction();return true;
+    }
+    private void sendAction(){
+        byte[] bytes;BluetoothGattCharacteristic target=ctrl;
+        switch(activeAction){
+            case "delete_recordings" -> {
+                if(actionPayload==null||actionPayload.length==0||actionPayload.length%18!=0||actionPayload.length>270){fail("Invalid deletion request");return;}
+                if(actionOffset>=actionPayload.length){read(info);return;}
+                bytes=Arrays.copyOfRange(actionPayload,actionOffset,actionOffset+18);
+                if(bytes[0]!=5){fail("Invalid deletion request");return;}
+            }
+            case "configure" -> {if(actionPayload==null||actionPayload.length!=6||config==null){fail("Invalid recorder settings");return;}bytes=actionPayload;target=config;}
+            case "mic_start" -> bytes=new byte[]{8,1};
+            case "mic_stop" -> bytes=new byte[]{8,0};
+            default -> {fail("Unknown recorder operation");return;}
+        }
+        waiting();try{if(gatt.writeCharacteristic(target,bytes,BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)!=BluetoothStatusCodes.SUCCESS)fail("Recorder operation could not start");}
+        catch(SecurityException e){fail("Bluetooth permission was revoked");}
+        catch(RuntimeException e){fail("Recorder operation could not start");}
+    }
+    private void afterStatus(){
+        if(latestInfo.enhanced&&catalog!=null){catalogRead=true;read(catalog);}else continueTransfer();
+    }
+    private void continueTransfer(){
+        if(activeAction!=null){Settings.metric(this,"device_action","Completed: "+activeAction.replace('_',' '));activeAction=null;actionPayload=null;}
+        if(stopTestAfterAction){stopTestAfterAction=false;pendingAction="mic_stop";actionPayload=null;}
+        if(beginAction())return;
+        if(latestInfo!=null&&(latestInfo.micState==1||latestInfo.micState==2)){
+            Settings.metric(this,"transfer","Microphone test \u00b7 no audio saved");handler.postDelayed(next,350);
+        }else startTransfer(latestInfo!=null&&latestInfo.skip);
+    }
     private volatile boolean destroyed;
     private long deadline,lastProgress;
     private TransferEngine engine;
@@ -76,7 +143,8 @@ public final class RelayService extends Service {
         upload.submit(()->Uploader.drain(this));
     }
     @Override public int onStartCommand(Intent i,int flags,int startId){
-        if(!Settings.enabled(this)){stopSelf();return START_NOT_STICKY;}return START_STICKY;
+        if(!Settings.enabled(this)){stopSelf();return START_NOT_STICKY;}
+        if(i!=null&&i.getAction()!=null){String action=i.getAction();byte[] payload=i.getByteArrayExtra("payload");handler.post(()->requestAction(action,payload));}return START_STICKY;
     }
     @Override public IBinder onBind(Intent i){return null;}
     private final Runnable watchdog=new Runnable(){public void run(){
@@ -84,7 +152,7 @@ public final class RelayService extends Service {
         if(deadline!=0&&SystemClock.elapsedRealtime()>deadline)fail("Bluetooth request timed out");
         handler.postDelayed(this,2000);
     }};
-    private final Runnable next=()->{if(!destroyed&&gatt!=null)engine.next();};
+    private final Runnable next=()->{if(!destroyed&&gatt!=null&&!beginAction()){if(info!=null)read(info);else engine.next();}};
     private void waiting(){deadline=SystemClock.elapsedRealtime()+25000;}
     private void connect(){
         if(destroyed||!Settings.enabled(this)||gatt!=null)return;
@@ -95,20 +163,23 @@ public final class RelayService extends Service {
                 Settings.metric(this,"connection","Bluetooth off or recorder unpaired");
                 handler.postDelayed(this::connect,10000);return;
             }
-            gatt=a.getRemoteDevice(address).connectGatt(this,true,callback,BluetoothDevice.TRANSPORT_LE);
+            gatt=a.getRemoteDevice(address).connectGatt(this,!directConnect,callback,BluetoothDevice.TRANSPORT_LE);directConnect=false;
+            deadline=SystemClock.elapsedRealtime()+45000;
             Settings.metric(this,"connection","Waiting for recorder");
         }catch(SecurityException e){fail("Bluetooth permission was revoked");}catch(Exception e){fail("Bluetooth unavailable");}
     }
     private void closeConnection(){
         connected=false;
         try{engine.disconnected();}catch(IOException e){Settings.metric(this,"recorder_problem","spool_sync_failed");}
-        ctrl=meta=data=info=null;
+        ctrl=meta=data=info=catalog=config=null;latestInfo=null;catalogRead=false;
         if(gatt!=null){try{gatt.disconnect();gatt.close();}catch(SecurityException ignored){}catch(RuntimeException ignored){}gatt=null;}
     }
     private void fail(String reason){
         if(destroyed)return;
+        if(activeAction!=null||pendingAction!=null)Settings.metric(this,"device_action","Operation interrupted: "+reason+". Refresh the recorder before retrying.");
+        activeAction=pendingAction=null;actionPayload=null;
         Settings.status(this,reason+"; recordings retained");Settings.metric(this,"connection","Disconnected");
-        deadline=0;closeConnection();handler.removeCallbacks(next);handler.postDelayed(this::connect,5000);
+        deadline=0;closeConnection();handler.removeCallbacks(next);handler.postDelayed(this::connect,Math.min(60000,5000L*(1+failures++)));
     }
     private void write(byte[] value){
         if(destroyed||gatt==null||ctrl==null)return;
@@ -150,8 +221,10 @@ public final class RelayService extends Service {
             if(status!=BluetoothGatt.GATT_SUCCESS||service==null){fail("Recorder service not found");return;}
             ctrl=service.getCharacteristic(Wire.CONTROL);meta=service.getCharacteristic(Wire.META);
             data=service.getCharacteristic(Wire.DATA);info=service.getCharacteristic(Wire.INFO);
+            catalog=service.getCharacteristic(Wire.INVENTORY);config=service.getCharacteristic(Wire.CONFIG);
             if(ctrl==null||meta==null||data==null){fail("Recorder protocol mismatch");return;}
-            connected=true;
+            connected=true;failures=0;
+            if(getSharedPreferences("diagnostics",MODE_PRIVATE).getString("device_action","").startsWith("Reconnecting"))Settings.metric(RelayService.this,"device_action","Recorder reconnected");
             getSharedPreferences("diagnostics",MODE_PRIVATE).edit().putLong("recorder_contact_at",System.currentTimeMillis()).apply();
             Settings.metric(RelayService.this,"connection","Connected");
             if(info!=null)read(info);else startTransfer(false);
@@ -159,6 +232,8 @@ public final class RelayService extends Service {
         @Override public void onCharacteristicWrite(BluetoothGatt g,BluetoothGattCharacteristic c,int status){handler.post(()->{
             if(g!=gatt||destroyed)return;deadline=0;
             if(status!=BluetoothGatt.GATT_SUCCESS){fail("Bluetooth authentication or write failed ("+status+")");return;}
+            if(activeAction!=null){if(activeAction.equals("delete_recordings")){actionOffset+=18;sendAction();}else read(info);return;}
+            if(beginAction())return;
             try{engine.written();}catch(Exception e){fail("Recording transfer or local storage failed");}
         });}
         @Override public void onCharacteristicRead(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value,int status){
@@ -166,17 +241,35 @@ public final class RelayService extends Service {
             handler.post(()->{
                 if(g!=gatt||destroyed)return;deadline=0;
                 if(status!=BluetoothGatt.GATT_SUCCESS){fail("Bluetooth read or authentication failed ("+status+")");return;}
+                if(pendingAction!=null&&activeAction==null){beginAction();return;}
                 try{
-                    if(c.getUuid().equals(Wire.INFO)){
+                    if(c.getUuid().equals(Wire.INVENTORY)&&catalogRead){
+                        catalogRead=false;java.util.List<RecorderInventory.Entry> entries=RecorderInventory.parse(bytes);
+                        getSharedPreferences("diagnostics",MODE_PRIVATE).edit().putString("inventory",android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)).putLong("inventory_at",System.currentTimeMillis()).apply();
+                        try(QueueDb db=new QueueDb(RelayService.this)){db.observed(entries);}continueTransfer();
+                    }else if(c.getUuid().equals(Wire.INFO)){
                         RecorderInfo diagnostic=new RecorderInfo(bytes);
-                        recorderStatus.update(diagnostic);
+                        latestInfo=diagnostic;recorderStatus.update(diagnostic);
                         Settings.recorderUpdate(RelayService.this,recorderStatus,true);
-                        if(engine.awaitingInfo())engine.infoRead();else startTransfer(diagnostic.skip);
+                        if(diagnostic.lowBattery)notifyLowBattery();
+                        if(activeAction!=null)afterStatus();else if(engine.awaitingInfo())engine.infoRead();else afterStatus();
                     }else engine.read(c.getUuid().equals(Wire.META),bytes);
                 }catch(Exception e){fail("Recording validation or local storage failed");}
             });
         }
     };
+    private long lastBatteryAlert;
+    private void notifyLowBattery(){
+        if(SystemClock.elapsedRealtime()-lastBatteryAlert<3_600_000&&lastBatteryAlert!=0)return;lastBatteryAlert=SystemClock.elapsedRealtime();
+        NotificationManager n=getSystemService(NotificationManager.class);
+        n.createNotificationChannel(new NotificationChannel("battery","Recorder battery",NotificationManager.IMPORTANCE_DEFAULT));
+        try{n.notify(13,new Notification.Builder(this,"battery").setSmallIcon(R.drawable.ic_voice).setContentTitle("Recorder battery is low").setContentText("Connect the recorder to USB to charge.").setAutoCancel(true).build());}catch(SecurityException ignored){}
+    }
+    @Override protected void dump(FileDescriptor fd,PrintWriter out,String[] args){
+        out.println(DashboardReader.read(this,false).diagnostics());
+        android.content.SharedPreferences d=getSharedPreferences("diagnostics",MODE_PRIVATE);
+        for(String key:new String[]{"enhanced","mic_state","mic_level","mic_peak","mic_frames","silence_ms","threshold","manual","free_slots","inventory_at","device_action"})out.println(key+"="+d.getAll().get(key));
+    }
     @Override public void onDestroy(){
         destroyed=true;running=false;connected=false;
         handler.removeCallbacksAndMessages(null);

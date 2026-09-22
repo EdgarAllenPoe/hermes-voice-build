@@ -141,3 +141,25 @@ void hvb_store_gc_step(void){
     }
     k_mutex_unlock(&lock);
 }
+
+int hvb_store_free(void){int n=0;k_mutex_lock(&lock,K_FOREVER);for(int s=0;s<HVB_SLOTS;s++)if(slots[s].state==FREE)n++;k_mutex_unlock(&lock);return n;}
+size_t hvb_store_inventory(uint8_t out[454]){
+    k_mutex_lock(&lock,K_FOREVER);memset(out,0,454);out[0]=1;unsigned n=0;
+    for(int s=0;s<HVB_SLOTS;s++)if(slots[s].state==FULL||slots[s].state==BROKEN){
+        uint8_t *p=out+4+n*30;p[0]=s;p[1]=slots[s].state==BROKEN?1:0;
+        memcpy(p+2,slots[s].hdr+24,16);sys_put_le32(64+slots[s].length,p+18);
+        sys_put_le32(slots[s].state==FULL?slots[s].length/164*20:0,p+22);
+        sys_put_le32((uint32_t)sys_get_le64(slots[s].hdr+48),p+26);n++;
+    }
+    out[1]=n;k_mutex_unlock(&lock);return 4+n*30;
+}
+/* Explicit operator discard. Guard slot reuse with its exact ID; durable tombstone
+ * precedes background erase. A recording being written is never deletable. */
+int hvb_store_delete(unsigned s,const uint8_t id[16]){
+    if(s>=HVB_SLOTS)return -EINVAL;
+    k_mutex_lock(&lock,K_FOREVER);int rc=-ENOENT;
+    if((slots[s].state==FULL||slots[s].state==BROKEN)&&!memcmp(slots[s].hdr+24,id,16)){
+        rc=marker(s,0);if(!rc)slots[s].state=DIRTY;
+    }
+    k_mutex_unlock(&lock);return rc;
+}

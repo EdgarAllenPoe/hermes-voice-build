@@ -130,3 +130,12 @@ A green server card requires an authenticated health check or matching upload re
 The interface follows the phone's light/dark setting and supports enlarged text, screen rotation, system-bar/keyboard insets and scrollable content. Buttons have at least 48 dp touch targets. The two tabs retain selection across activity recreation.
 
 The personal delivery uses a non-debuggable **release** APK, signed locally with the retained installation key. Install it over the existing app without uninstalling or clearing data. The app's package, queue schema, pairing and firmware protocol remain compatible. This is a personal sideloaded release; actual locked-phone Bluetooth behavior and battery hardware still require physical acceptance testing.
+
+
+## Version 0.5.0 recordings and recorder controls
+
+[The current user guide](17-recordings-and-controls.md) covers history, playback, optional delivered-audio retention, guarded queue deletion, reconnection, capture settings, battery reporting, and the microphone test. Firmware 0.4.0 supplies the new controls; legacy recorder transfer remains supported. Idle connection is now maintained when possible, so reconnection is automatic and can also be requested explicitly.
+
+Queue schema 3 upgrades versions 1 and 2 in place without dropping pending audio or receipts. Existing receipts have no recoverable duration/audio unless previously retained. Server processing status is authenticated and matched to each receipt's UUID/hash; it is distinct from server acceptance. The retention option defaults off. A separate Android cleanup job and access-time checks enforce expiry; Android may delay physical cleanup.
+
+This release keeps package `org.tomstout.hermesvoice` and the retained personal signing key. Install as an update, never by uninstalling a phone with unsent recordings. Live verification and limitations are recorded in [the release report](../FEATURES_0.5.0_VERIFIED.md).

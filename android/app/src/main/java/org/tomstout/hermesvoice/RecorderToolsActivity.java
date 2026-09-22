@@ -1,0 +1,34 @@
+package org.tomstout.hermesvoice;
+import android.app.*;import android.os.*;import android.widget.*;import java.nio.*;import java.util.*;
+public final class RecorderToolsActivity extends ToolScreen {
+    private TextView status,battery,meter,action;private Spinner silence;private EditText sensitivity;private Switch manual;private ProgressBar level;private boolean loaded,testRequested;
+    private final Runnable pulse=new Runnable(){public void run(){if(!visible)return;render();ui.postDelayed(this,350);}};
+    @Override public void onCreate(Bundle saved){super.onCreate(saved);setup("Recorder controls","Settings, queue management and a microphone check for your XIAO.");
+        LinearLayout connection=card(page);status=text(connection,"Checking recorder\u2026",17,true);battery=text(connection,"",14,false);action=text(connection,"",13,false);
+        button(connection,"Reconnect recorder",()->command("reconnect",null));button(connection,"Refresh recorder status",()->command("refresh",null));
+        LinearLayout capture=card(page);text(capture,"Recording settings",19,true);text(capture,"Silence before automatic save",14,false);
+        silence=new Spinner(this);silence.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"2 seconds","4 seconds","6 seconds"}));silence.setMinimumHeight(dp(48));capture.addView(silence);
+        manual=new Switch(this);manual.setText("Save only when I press again");manual.setTextColor(ink);manual.setMinHeight(dp(48));capture.addView(manual);text(capture,"The 60-second maximum still applies in manual mode.",12,false);
+        text(capture,"Speech threshold \u00b7 lower is more sensitive (10\u20131000)",14,false);sensitivity=new EditText(this);sensitivity.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);sensitivity.setText("40");sensitivity.setTextColor(ink);sensitivity.setMinHeight(dp(48));capture.addView(sensitivity);
+        button(capture,"Save settings to recorder",()->{try{int threshold=Integer.parseInt(sensitivity.getText().toString());if(threshold<10||threshold>1000)throw new IllegalArgumentException();byte[] b=ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)((silence.getSelectedItemPosition()+1)*2000)).putShort((short)threshold).put((byte)(manual.isChecked()?1:0)).put((byte)0).array();command("configure",b);}catch(Exception e){message("Enter a speech threshold from 10 to 1000.");}});
+        LinearLayout test=card(page);text(test,"Microphone test",19,true);text(test,"Start the test. Stay quiet briefly, then speak at your normal distance. The speech level should rise above your threshold. Choose a threshold above room noise and below normal speech.",14,false);
+        text(test,"No test audio is saved or uploaded. Stops after 60 seconds, when you leave this screen, or when you press the recorder button.",12,false);
+        level=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);level.setMax(1000);test.addView(level,new LinearLayout.LayoutParams(-1,dp(24)));meter=text(test,"Test is off",14,false);
+        button(test,"Start microphone test",()->{testRequested=true;command("mic_start",null);});button(test,"Stop microphone test",()->{testRequested=false;command("mic_stop",null);});
+        LinearLayout queue=card(page);text(queue,"Queue tools",19,true);button(queue,"Review recorder queue",this::reviewQueue);
+        button(queue,"Clear recorder queue\u2026",()->{try{confirmRecorderDelete(catalog());}catch(Exception e){message("Reconnect and refresh the recorder queue first.");}});
+        button(queue,"Clear unfinished phone transfers\u2026",()->new AlertDialog.Builder(this).setTitle("Clear unfinished transfers?").setMessage("Delete partial and rejected transfer files on this phone? Complete phone recordings and recorder originals remain. Transfers restart from the recorder.").setNegativeButton("Keep files",null).setPositiveButton("Clear",(d,w)->command("clear_partials",null)).show());
+        LinearLayout guide=card(page);text(guide,"Recorder lights",19,true);text(guide,"Steady green: recording\nTwo green flashes: saved locally\nThree blue flashes: received by phone\nThree red flashes: full queue or storage problem; check status\nOne brief red flash every 10 seconds: low battery\nCyan: microphone test\nSteady blue while holding: pairing\nSeparate steady red charging light: charging",14,false);
+    }
+    @Override protected void onResume(){super.onResume();ui.post(pulse);}
+    @Override protected void onPause(){ui.removeCallbacks(pulse);if(testRequested||diagnostic().getInt("mic_state",0)==1||diagnostic().getInt("mic_state",0)==2){testRequested=false;command("mic_stop",null);}super.onPause();}
+    private void render(){android.content.SharedPreferences d=diagnostic();boolean connected=RelayService.isConnected(),enhanced=d.getBoolean("enhanced",false);
+        status.setText(connected?(enhanced?"Recorder connected":"Update recorder firmware to use these controls"):"Recorder disconnected \u00b7 tap Reconnect");
+        battery.setText(d.getString("battery","Battery status unavailable")+"\n"+(connected?"":"Last known \u00b7 ")+"Queue: "+countLabel(d.getInt("recorder_queue",-1))+" \u00b7 free slots: "+countLabel(d.getInt("free_slots",-1)));action.setText(d.getString("device_action",""));
+        int mic=d.getInt("mic_state",0),value=d.getInt("mic_level",0);level.setMax(Math.max(100,d.getInt("threshold",40)*3));level.setProgress(value);
+        meter.setText(!connected?"Microphone status unavailable":mic==3?"Microphone test failed \u00b7 check diagnostics":mic==1?"Starting microphone\u2026":mic==2?"Live level: "+value+" \u00b7 peak: "+d.getInt("mic_peak",0)+" \u00b7 threshold: "+d.getInt("threshold",40)+(value>=d.getInt("threshold",40)?" \u00b7 above speech threshold":" \u00b7 below speech threshold"):"Test is off");
+        if(connected&&enhanced&&!loaded){loaded=true;silence.setSelection(Math.max(0,Math.min(2,d.getInt("silence_ms",2000)/2000-1)));sensitivity.setText(Integer.toString(d.getInt("threshold",40)));manual.setChecked(d.getBoolean("manual",false));}
+    }
+    private String countLabel(int value){return value<0?"not read yet":Integer.toString(value);}
+    private void reviewQueue(){try{List<RecorderInventory.Entry> items=catalog();if(items.isEmpty()){message("Recorder queue is empty.");return;}String[] labels=new String[items.size()];for(int i=0;i<items.size();i++){RecorderInventory.Entry e=items.get(i);labels[i]="Slot "+(e.slot()+1)+" \u00b7 "+(e.damaged()?"damaged":e.durationMs()/1000.0+" seconds")+" \u00b7 "+e.id().substring(0,8);}new AlertDialog.Builder(this).setTitle("Select a recording to delete").setItems(labels,(d,i)->confirmRecorderDelete(List.of(items.get(i)))).setNegativeButton("Close",null).show();}catch(Exception e){message("Reconnect and refresh the recorder queue first.");}}
+}

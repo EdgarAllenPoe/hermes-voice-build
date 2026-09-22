@@ -30,16 +30,23 @@ void hvb_decode_frame(const uint8_t in[164],int16_t pcm[320]){
         pcm[i]=(int16_t)pred;
     }
 }
-int hvb_gate_update(struct hvb_gate *g,const int16_t *pcm,unsigned threshold){
+unsigned hvb_audio_level(const int16_t *pcm){
     int32_t sum=0;uint32_t dev=0;
     for(unsigned i=0;i<320;i++)sum+=pcm[i];
     int32_t mean=sum/320;
     for(unsigned i=0;i<320;i++){int32_t d=pcm[i]-mean;dev+=(uint32_t)(d<0?-d:d);}
-    int voiced=(dev/320)>=threshold;g->frames++;
+    return dev/320;
+}
+int hvb_gate_configured(struct hvb_gate *g,const int16_t *pcm,unsigned threshold,unsigned silence_ms,int manual){
+    int voiced=hvb_audio_level(pcm)>=threshold;g->frames++;
     if(voiced){g->voiced_run++;g->silence=0;if(g->voiced_run>=3)g->heard=1;}
     else {g->voiced_run=0;g->silence++;}
     if(g->frames>=3000)return 3;
-    if(g->heard&&g->silence>=HVB_SILENCE_FRAMES)return 1;
-    if(!g->heard&&g->frames>=250)return 2;
+    if(!manual&&g->heard&&g->silence>=silence_ms/HVB_FRAME_MS)return 1;
+    if(!manual&&!g->heard&&g->frames>=250)return 2;
     return 0;
+}
+
+int hvb_gate_update(struct hvb_gate *g,const int16_t *pcm,unsigned threshold){
+    return hvb_gate_configured(g,pcm,threshold,HVB_SILENCE_MS,0);
 }

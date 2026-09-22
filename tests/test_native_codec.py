@@ -16,7 +16,7 @@ class NativeCodecTests(unittest.TestCase):
   if os.name=='nt':
    # This integer-only library needs no Windows SDK or DLL startup runtime.
    flags += ['-nostdlib','-fno-builtin','-fno-stack-protector','-Xlinker','/NOENTRY']
-   for name in ('hvb_encode_frame','hvb_decode_frame','hvb_gate_update','test_vad_threshold'):
+   for name in ('hvb_encode_frame','hvb_decode_frame','hvb_gate_update','hvb_gate_configured','test_vad_threshold'):
     flags += ['-Xlinker','/EXPORT:'+name]
   else:flags.append('-fPIC')
   subprocess.run([os.environ.get('CC','gcc'),*flags,'-I',str(ROOT/'firmware/src'),str(ROOT/'firmware/src/codec.c'),str(config),'-o',str(lib)],check=True)
@@ -25,6 +25,7 @@ class NativeCodecTests(unittest.TestCase):
   cls.threshold=cls.c.test_vad_threshold()
   cls.c.hvb_encode_frame.argtypes=[ctypes.POINTER(ctypes.c_int16),ctypes.POINTER(ctypes.c_uint8)];cls.c.hvb_encode_frame.restype=None
   cls.c.hvb_decode_frame.argtypes=[ctypes.POINTER(ctypes.c_uint8),ctypes.POINTER(ctypes.c_int16)];cls.c.hvb_decode_frame.restype=None
+  cls.c.hvb_gate_configured.argtypes=[ctypes.POINTER(Gate),ctypes.POINTER(ctypes.c_int16),ctypes.c_uint,ctypes.c_uint,ctypes.c_int];cls.c.hvb_gate_configured.restype=ctypes.c_int
   cls.c.hvb_gate_update.argtypes=[ctypes.POINTER(Gate),ctypes.POINTER(ctypes.c_int16),ctypes.c_uint];cls.c.hvb_gate_update.restype=ctypes.c_int
  @classmethod
  def tearDownClass(cls):
@@ -90,3 +91,14 @@ class NativeCodecTests(unittest.TestCase):
   for _ in range(2900):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),voice,self.threshold),0)
   for _ in range(99):self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),0)
   self.assertEqual(self.c.hvb_gate_update(ctypes.byref(g),sil,self.threshold),3)
+
+ def test_configurable_silence_four_and_six_seconds(self):
+  for ms in (4000,6000):
+   gate=Gate();voice=self.PCM(*([2000,-2000]*160));silence=self.PCM(*([0]*320))
+   for _ in range(3):self.assertEqual(self.c.hvb_gate_configured(ctypes.byref(gate),voice,40,ms,0),0)
+   for _ in range(ms//20-1):self.assertEqual(self.c.hvb_gate_configured(ctypes.byref(gate),silence,40,ms,0),0)
+   self.assertEqual(self.c.hvb_gate_configured(ctypes.byref(gate),silence,40,ms,0),1)
+ def test_manual_mode_keeps_silence_but_enforces_sixty_second_limit(self):
+  gate=Gate();silence=self.PCM(*([0]*320))
+  for _ in range(2999):self.assertEqual(self.c.hvb_gate_configured(ctypes.byref(gate),silence,40,2000,1),0)
+  self.assertEqual(self.c.hvb_gate_configured(ctypes.byref(gate),silence,40,2000,1),3)

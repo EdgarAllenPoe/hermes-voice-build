@@ -21,6 +21,16 @@ void hvb_capture_diagnostics(uint8_t out[12]);
 int hvb_store_read(int slot,uint32_t offset,void *data,size_t len);
 int hvb_store_ack(int slot,const uint8_t id[16]);
 int hvb_store_count(void);
+int hvb_store_free(void);
+size_t hvb_store_inventory(uint8_t out[454]);
+int hvb_store_delete(unsigned slot,const uint8_t id[16]);
+void hvb_live_diagnostics(uint8_t out[32]);
+int hvb_mic_test(bool start);
+void hvb_signal(unsigned event);
+#define HVB_SIGNAL_SAVED 1
+#define HVB_SIGNAL_TRANSFERRED 2
+#define HVB_SIGNAL_FULL 3
+#define HVB_SIGNAL_ERROR 4
 void hvb_store_gc_step(void);
 int hvb_ble_init(void);
 void hvb_ble_pair_window(void);

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hmac, ipaddress, json, logging
+import hmac, ipaddress, json, logging, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .audio import MAX_FILE
 from .storage import Store,Conflict,QueueFull
@@ -25,8 +25,15 @@ def server(store:Store,host:str,port:int,token:str):
             return hmac.compare_digest(self.headers.get('Authorization',''),f'Bearer {token}')
         def do_GET(self):
             if not self.authed(): return self.reply(401,{'error':'unauthorized'})
+            if self.path.startswith('/v1/messages/'):
+                mid=self.path[len('/v1/messages/'):]
+                try:
+                    if str(uuid.UUID(mid))!=mid: raise ValueError('canonical UUID required')
+                except ValueError: return self.reply(400,{'error':'invalid message ID'})
+                status=store.delivery_status(mid)
+                return self.reply(200,status) if status else self.reply(404,{'error':'unknown message'})
             if self.path!='/health': return self.reply(404,{'error':'not found'})
-            return self.reply(200,{'status':'ok','protocol':'HVB1','queue':store.report()['states']})
+            return self.reply(200,{'status':'ok','protocol':'HVB1','message_status':1,'queue':store.report()['states']})
         def do_POST(self):
             if not self.authed(): return self.reply(401,{'error':'unauthorized'})
             if self.path!='/v1/voice': return self.reply(404,{'error':'not found'})

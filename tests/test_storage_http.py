@@ -58,3 +58,12 @@ class HttpTests(unittest.TestCase):
   for host in ('0.0.0.0','192.168.1.4','8.8.8.8'):
    with self.assertRaises(ValueError):validate_bind(host)
   validate_bind('127.0.0.1');validate_bind('100.80.1.2')
+
+ def test_processing_status_authenticated_and_content_free(self):
+  audio=make_container([400]*320);mid,digest,_=self.s.ingest(audio);self.s.set(mid,'done',transcript='private transcript',result='private result')
+  code,data=self.request(None,path='/v1/messages/'+mid,method='GET');self.assertEqual(code,200);self.assertEqual(data['state'],'done');self.assertEqual(data['sha256'],digest)
+  self.assertNotIn('transcript',data);self.assertNotIn('audio',data);self.assertNotIn('result',data)
+  self.assertEqual(self.request(None,{'Authorization':'Bearer wrong'},path='/v1/messages/'+mid,method='GET')[0],401)
+ def test_processing_status_unknown_and_invalid_ids(self):
+  self.assertEqual(self.request(None,path='/v1/messages/'+str(uuid.uuid4()),method='GET')[0],404)
+  for value in ('../../private','bad-id','0'*36):self.assertEqual(self.request(None,path='/v1/messages/'+value,method='GET')[0],400)

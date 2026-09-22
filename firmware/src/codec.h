@@ -13,5 +13,7 @@ void hvb_encode_frame(const int16_t pcm[HVB_FRAME_SAMPLES], uint8_t out[HVB_FRAM
 void hvb_decode_frame(const uint8_t in[HVB_FRAME_BYTES], int16_t pcm[HVB_FRAME_SAMPLES]);
 struct hvb_gate { unsigned frames, voiced_run, silence; int heard; };
 /* 0=continue, 1=end after silence, 2=no speech, 3=limit reached. */
+unsigned hvb_audio_level(const int16_t *pcm);
+int hvb_gate_configured(struct hvb_gate *g,const int16_t *pcm,unsigned threshold,unsigned silence_ms,int manual);
 int hvb_gate_update(struct hvb_gate *g, const int16_t *pcm, unsigned threshold);
 #endif

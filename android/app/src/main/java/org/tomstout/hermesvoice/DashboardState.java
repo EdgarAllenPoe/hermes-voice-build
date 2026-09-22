@@ -25,7 +25,7 @@ final class DashboardState {
                 s.recorderQueue>0?waitFor("Transferring recordings",queue+". Keep the recorder nearby."):
                 good("Connected",queue+". Your recorder is within reach.");
         } else recorder=waitFor("Standing by",s.lastContact>0?
-            "Last contact "+ago(s.now,s.lastContact)+". It normally disconnects between recordings.":
+            "Last contact "+ago(s.now,s.lastContact)+". Keep the recorder nearby; reconnection is automatic while the relay runs.":
             "Waiting for your recorder. Make a recording or hold its button for two seconds.");
 
         if(!s.storageOk)delivery=error("Phone storage problem","Open Diagnostics. Existing recordings have not been cleared.");

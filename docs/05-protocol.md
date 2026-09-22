@@ -51,7 +51,7 @@ The remaining UUID groups match the service UUID. Access requires a bonded authe
 
 **ACK:** after full validation and durable local commit, write byte `03` followed by the exact 16 UUID bytes. This marks the slot eligible for reclamation. ACKing only a RAM buffer or before checksum verification is a protocol violation.
 
-INFO is eight bytes: protocol byte 1; capture/tentative-mic-active byte; committed-message count byte; reserved byte; uint16 battery millivolts (zero when not available); uint16 reserved. Voltage is diagnostic, not calibrated percentage.
+Legacy INFO is eight bytes: protocol byte 1; capture/tentative-mic-active byte; committed-message count byte; reserved byte; uint16 battery millivolts (zero when not available); uint16 reserved. Voltage is diagnostic, not calibrated percentage.
 
 On disconnect the selection is lost. The phone requests NEXT again and may resume its `.part` file when the ID/length still match. Invalid complete partial data is discarded on the phone and downloaded again; it is not ACKed.
 
@@ -118,9 +118,45 @@ Clients must accept the legacy eight-byte response and must not infer optional c
 | 28 | 2 | Quarantined or broken slots |
 | 30 | 2 | Capabilities; bit 0 supports SKIP |
 
-Counters are unsigned little-endian and reset at boot. Battery voltage remains a diagnostic reading, not a calibrated percentage. Android's display is a snapshot captured at connection.
+Counters are unsigned little-endian and reset at boot. Battery voltage remains a diagnostic reading, not a calibrated percentage. Android's display is a timestamped snapshot; version 0.5 also refreshes it while connected.
 
 **SKIP:** only with capability bit 0, write byte 04 followed by the selected UUID.
 This excludes that slot from later NEXT selections on the same connection. No flash marker is written and no audio is deleted. The exclusion resets on disconnect. Android attempts three complete invalid downloads before using SKIP and preserves the rejected bytes in its private incoming directory with suffix .bad.
 
 At boot, firmware validates committed header fields, frame structure and payload CRC. Corrupt committed slots become quarantined and are not returned by NEXT. Bytes remain intact, capacity is reduced, and diagnostics report the quarantined count. There is no automatic destructive recovery command. A corrupt message must never be acknowledged merely to clear the queue.
+
+
+## Compatible controls extension in firmware 0.4.0
+
+INFO is now 64 bytes. Offsets 0–31 retain the previous meanings. Capabilities at offset 30 are: bit 0 SKIP, bit 1 inventory and guarded delete, bit 2 capture settings, bit 3 microphone test, bit 4 charging diagnostics. Current firmware advertises 31. Legacy clients may keep using the original fields and commands.
+
+| Offset | Size | Meaning |
+|---|---|---|
+| 32 | 1 | Extension schema = 2 |
+| 33 | 1 | Charge state: 0 unknown, 1 battery, 2 charging, 3 USB not charging, 4 problem |
+| 34 | 1 | Low-battery flag |
+| 35 | 1 | Mic test: 0 off, 1 starting, 2 active, 3 error |
+| 36 | 4 | Signed charging current in mA |
+| 40 | 2 | DC-independent audio level |
+| 42 | 2 | Peak level during this test |
+| 44 | 2 | Silence delay in milliseconds |
+| 46 | 2 | Audio-level threshold |
+| 48 | 1 | Manual-save mode: 0 or 1 |
+| 49 | 1 | Free recorder slots; erasing slots are not yet free |
+| 50 | 2 | Reserved |
+| 52 | 4 | Mic-test frames processed |
+| 56 | 8 | Reserved |
+
+**Inventory:** characteristic `58ef0006-35c8-4c31-89aa-81f763051da1`, authenticated read. Header `[1, count, 0, 0]` is followed by up to 15 rows, each 30 bytes: slot (1), damaged flag (1), UUID (16), file length (4), duration milliseconds (4), sequence low 32 bits (4). A read starting at offset zero captures a snapshot retained through subsequent long-read offsets. Slot numbers are zero-based. Damaged rows can have unknown length/duration/ID. Inventory contains no audio.
+
+**Guarded delete:** capability bit 1; write control `[05, slot, UUID16]` (18 bytes). Only a committed or quarantined slot with that exact ID can be deleted. A stale slot/ID, writing slot, or active capture is rejected. The durable discard marker precedes normal background erasure. This is distinct from ACK, which still requires a validated durable phone copy. Android serializes these operations with normal transfer, requires a recent connected inventory, and confirms the specific rows before sending.
+
+**Capture settings:** characteristic `58ef0007-35c8-4c31-89aa-81f763051da1`, authenticated read/write. Exactly six bytes: silence milliseconds (u16; 2000/4000/6000), threshold (u16; 10–1000), manual flag (u8; 0/1), reserved zero. Defaults are 2000/40/0. Validate all fields before writing persistent Zephyr settings; a successful write updates the live configuration. Active capture rejects changes and uses a snapshot of its starting settings. Manual mode disables silence/no-speech stopping but retains the 60-second cap.
+
+**Microphone test:** capability bit 3; control `[08, 01]` starts, `[08, 00]` stops. Starting during capture is rejected. The test allocates no recording slot and sends only levels/counters in INFO. It stops on disconnect, button press, cancellation, or its 60-second deadline. Android requests stop when leaving the controls screen.
+
+## Authenticated processing status
+
+`GET /v1/messages/<canonical-lowercase-UUID>` uses the existing bearer token. Success (200) returns only `id`, `sha256`, `state`, `created`, and `updated`. Unknown IDs return 404; malformed IDs return 400. No audio, transcript, or Hermes result is returned. `/health` advertises `message_status: 1`.
+
+The Android client checks the ID and hash against its verified upload receipt before accepting a stage update. Failed status requests do not remove receipts or cause another upload. A completed worker handoff (`done`) is separate from proof of every downstream tool action. No remote deletion API is introduced.

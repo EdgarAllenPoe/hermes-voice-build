@@ -33,6 +33,7 @@ public final class MainActivity extends Activity {
     private Palette colors;
     private Button statusTab,diagnosticsTab,checkButton,diagnosticCheck,relayButton,reviewButton,retryButton;
     private ScrollView statusPage,diagnosticsPage;
+    private TextView batterySummary;
     private TextView heroTitle,heroDetail,heroLabel,heroSymbol,relayLabel,receiptLabel,diagnosticText,updatedLabel;
     private LinearLayout hero;
     private HealthCard recorderCard,deliveryCard,serverCard;
@@ -46,7 +47,7 @@ public final class MainActivity extends Activity {
     }};
 
     @Override public void onCreate(Bundle state){
-        super.onCreate(state);
+        super.onCreate(state);RetentionJob.schedule(this);
         colors=new Palette((getResources().getConfiguration().uiMode&Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES);
         getWindow().setDecorFitsSystemWindows(false);
         LinearLayout outer=column();outer.setBackgroundColor(colors.background);
@@ -79,6 +80,7 @@ public final class MainActivity extends Activity {
         LinearLayout home=page();statusPage=scroll(home);statusPage.setTag("status_page");pages.addView(statusPage);
         LinearLayout diagnostics=page();diagnosticsPage=scroll(diagnostics);diagnosticsPage.setTag("diagnostics_page");pages.addView(diagnosticsPage);
         buildStatus(home);buildDiagnostics(diagnostics);
+        if(Settings.enabled(this)&&permissions())RelayService.start(this);
         selectTab(state==null?0:state.getInt("tab",0));
         refresh();
     }
@@ -99,6 +101,9 @@ public final class MainActivity extends Activity {
         recorderCard=new HealthCard("Recorder");add(page,recorderCard.box,14);
         deliveryCard=new HealthCard("Delivery");add(page,deliveryCard.box,10);
         serverCard=new HealthCard("Server");add(page,serverCard.box,10);
+        batterySummary=label("Battery status unavailable",13,colors.muted,false);add(page,batterySummary,12);
+        add(page,button("Recordings & delivery history",false,()->startActivity(new Intent(this,RecordingsActivity.class))),12);
+        add(page,button("Recorder controls",false,()->startActivity(new Intent(this,RecorderToolsActivity.class))),8);
         checkButton=button("Check connection",true,this::checkConnection);checkButton.setTag("check_connection");add(page,checkButton,18);
         relayButton=button("Start relay",false,this::toggleRelay);relayButton.setTag("relay_toggle");add(page,relayButton,8);
         receiptLabel=label("Server receipts confirm delivery. Hermes replies arrive separately in Telegram.",12,colors.muted,false);add(page,receiptLabel,14);
@@ -110,6 +115,8 @@ public final class MainActivity extends Activity {
         add(page,label("Setup, connection checks and details when you need them.",14,colors.muted,false),6);
         LinearLayout setup=section(page,"Setup & connections");
         add(setup,button("Server settings",false,this::serverSettings),8);
+        add(setup,button("Reconnect recorder",false,()->RelayService.action(this,"reconnect",null)),8);
+        add(setup,button("Recorder controls & microphone test",false,()->startActivity(new Intent(this,RecorderToolsActivity.class))),8);
         add(setup,button("Pair recorder",false,this::pair),8);
         add(setup,button("App permissions",false,this::permissionSettings),8);
         LinearLayout delivery=section(page,"Delivery tools");
@@ -167,6 +174,10 @@ public final class MainActivity extends Activity {
         setText(relayButton,s.relayEnabled&&s.relayRunning?"Pause relay":"Start relay");
         reviewButton.setEnabled(s.held>0);reviewButton.setAlpha(s.held>0?1f:.5f);
         retryButton.setEnabled(s.pending>0&&s.relayEnabled);retryButton.setAlpha(s.pending>0&&s.relayEnabled?1f:.5f);
+        android.content.SharedPreferences diagnostics=getSharedPreferences("diagnostics",MODE_PRIVATE);
+        long batteryAt=diagnostics.getLong("recorder_read_at",0);
+        setText(batterySummary,diagnostics.getString("battery","Battery status unavailable")+(batteryAt>0?" \u00b7 checked "+DashboardState.ago(System.currentTimeMillis(),batteryAt):""));
+        batterySummary.setTextColor(diagnostics.getBoolean("low_battery",false)||diagnostics.getInt("charge_state",0)==4?colors.tone(DashboardState.Level.ERROR):colors.muted);
         setText(updatedLabel,"Updates automatically while this screen is open.");
         if(!snapshot.diagnostics().equals(lastDiagnostic)){lastDiagnostic=snapshot.diagnostics();diagnosticText.setText(lastDiagnostic);}
     }
@@ -174,7 +185,7 @@ public final class MainActivity extends Activity {
         if(io.isShutdown()||!checking.compareAndSet(false,true))return;
         lastAutoCheck=SystemClock.elapsedRealtime();refresh();
         io.submit(()->{
-            try{ServerHealth.check(this);}
+            try{ServerHealth.check(this);ProcessingStatus.refresh(this);}
             finally{checking.set(false);refresh();}
         });
     }

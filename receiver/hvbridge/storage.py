@@ -151,3 +151,9 @@ class Store:
             cur=db.execute("UPDATE messages SET audio=NULL WHERE state='done' AND updated<? AND audio IS NOT NULL",
                            (time.time()-days*86400,))
             return cur.rowcount
+
+    def delivery_status(self,mid:str):
+        """Authenticated receipt status; deliberately excludes audio and agent output."""
+        with self.connect() as db:
+            row=db.execute('SELECT id,sha256,state,created,updated FROM messages WHERE id=?',(mid,)).fetchone()
+            return dict(row) if row else None

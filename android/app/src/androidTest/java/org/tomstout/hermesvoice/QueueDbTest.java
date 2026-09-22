@@ -61,7 +61,7 @@ public final class QueueDbTest {
         }
         try(QueueDb d=new QueueDb(context)){
             assertArrayEquals(b,d.next().audio());assertEquals(0,d.next().attempts());
-            assertEquals(2,d.getReadableDatabase().getVersion());
+            assertEquals(3,d.getReadableDatabase().getVersion());
             assertFalse(d.accept(b));
         }
     }
@@ -77,5 +77,29 @@ public final class QueueDbTest {
                 }
             }
         }
+    }
+
+    @Test public void discardedRecordingCannotReappearOrUpload(){
+        byte[] b=audio(20);try(QueueDb db=new QueueDb(context)){db.accept(b);db.discard(Wire.id(b,24));assertNull(db.next());assertNull(db.playback(Wire.id(b,24)));assertFalse(db.accept(b));assertEquals("discarded",db.history().get(0).state());}
+    }
+    @Test public void recorderInventoryBecomesDurablePhoneCopy(){
+        byte[] b=audio(21);String id=Wire.id(b,24);try(QueueDb db=new QueueDb(context)){
+            db.observed(java.util.List.of(new RecorderInventory.Entry(0,false,id,b.length,20,1)));assertEquals("recorder",db.history().get(0).state());assertNull(db.next());
+            assertTrue(db.accept(b));assertArrayEquals(b,db.next().audio());assertEquals(20,db.history().get(0).durationMs());
+            db.observed(java.util.List.of());assertEquals(1,db.history().size());
+        }
+    }
+    @Test public void deliveredAudioRetentionExpiresWithoutLosingReceipt(){
+        context.getSharedPreferences("settings",0).edit().putBoolean("keep_audio",true).commit();byte[] b=audio(22);String id=Wire.id(b,24);
+        try(QueueDb db=new QueueDb(context)){db.accept(b);db.sent(id);assertArrayEquals(b,db.playback(id));db.getWritableDatabase().execSQL("UPDATE messages SET retain_until=1 WHERE id=?",new Object[]{id});assertNull(db.playback(id));assertFalse(db.accept(b));assertEquals("sent",db.history().get(0).state());}
+        finally{context.getSharedPreferences("settings",0).edit().putBoolean("keep_audio",false).commit();}
+    }
+    @Test public void deletionDoesNotEraseSentReceipt(){byte[] b=audio(23);String id=Wire.id(b,24);try(QueueDb db=new QueueDb(context)){db.accept(b);db.sent(id);db.discard(id);assertEquals("sent",db.history().get(0).state());}}
+    @Test public void versionTwoUpgradePreservesHeldRecording(){
+        byte[] b=audio(24);try(SQLiteDatabase old=context.openOrCreateDatabase("voice_queue.db",0,null)){
+            old.execSQL("CREATE TABLE messages(id TEXT PRIMARY KEY,sha TEXT NOT NULL,audio BLOB,state TEXT NOT NULL,created INTEGER NOT NULL,error TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_try INTEGER NOT NULL DEFAULT 0)");
+            old.execSQL("INSERT INTO messages(id,sha,audio,state,created) VALUES(?,?,?,'held',1)",new Object[]{Wire.id(b,24),Wire.hash(b),b});old.setVersion(2);
+        }
+        try(QueueDb db=new QueueDb(context)){assertArrayEquals(b,db.playback(Wire.id(b,24)));assertEquals(1,db.stats().held());db.retry(Wire.id(b,24));assertNotNull(db.next());}
     }
 }

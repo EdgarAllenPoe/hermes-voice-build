@@ -6,15 +6,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONObject;
 final class Uploader {
+    static final Object QUEUE_LOCK=new Object();
+    static volatile boolean maintenance;
     private static final AtomicBoolean busy=new AtomicBoolean(false);
     static void drain(Context ctx){
-        if(!Settings.enabled(ctx)||!busy.compareAndSet(false,true))return;
+        if(!Settings.enabled(ctx)||maintenance||!busy.compareAndSet(false,true))return;
         long revision=Settings.prefs(ctx).getLong("server_revision",0);
-        try(QueueDb db=new QueueDb(ctx)){
+        synchronized(QUEUE_LOCK){try(QueueDb db=new QueueDb(ctx)){
+            db.purgeExpired();
             URL endpoint=Endpoint.parse(Settings.endpoint(ctx));String token=Settings.token(ctx);
             if(endpoint.getProtocol().equals("http")&&!Endpoint.tailInterfacePresent())
                 throw new IOException("Tailscale interface unavailable");
-            for(int n=0;n<30&&Settings.enabled(ctx)&&!Thread.currentThread().isInterrupted();n++){
+            for(int n=0;n<30&&!maintenance&&Settings.enabled(ctx)&&!Thread.currentThread().isInterrupted();n++){
                 QueueDb.Item m=db.next();if(m==null)break;HttpURLConnection conn=null;
                 try{
                     conn=(HttpURLConnection)endpoint.openConnection();conn.setInstanceFollowRedirects(false);
@@ -54,6 +57,7 @@ final class Uploader {
             Settings.serverHealth(ctx,revision,false,"Check server settings, token and Tailscale.");
             Settings.status(ctx,"Check server settings, token, and Tailscale; recordings retained");
         }
-        finally{busy.set(false);}
+        finally{busy.set(false);}}
+        ProcessingStatus.refresh(ctx);
     }
 }
